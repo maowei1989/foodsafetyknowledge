@@ -1,0 +1,2726 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中國邊境食品安全查驗不合格情資戰情中心 (China Border Food Safety BI War-Room)</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js 4.4 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- FontAwesome 6 CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- SheetJS & PapaParse for Excel/CSV parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <!-- PDF.js CDN for direct PDF border notification parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            dash: {
+              bg: '#070b13',
+              card: '#0f172a',
+              border: '#1e293b',
+              accent: '#06b6d4',
+              hover: '#1e293b'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'Microsoft JhengHei', 'PingFang TC', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Consolas', 'Courier New', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    body {
+      background-color: #070b13;
+      color: #f1f5f9;
+      font-family: 'Inter', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+      overflow-x: hidden;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b1120;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #0284c7;
+    }
+    .card-panel {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+      border-radius: 0.75rem;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .card-panel:hover {
+      border-color: rgba(6, 182, 212, 0.4);
+      box-shadow: 0 8px 25px -5px rgba(6, 182, 212, 0.08);
+    }
+    .kpi-card {
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .kpi-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 60px;
+      height: 60px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .pulse-glow {
+      animation: pulse-ring 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#070b13]">
+
+  <header class="border-b border-slate-800 bg-[#0a0f1d]/90 sticky top-0 z-40 backdrop-blur-md px-4 py-2.5">
+    <div class="max-w-[1800px] mx-auto flex flex-col lg:flex-row items-center justify-between gap-3">
+      
+      <!-- Logo & System Title -->
+      <div class="flex items-center gap-3 w-full lg:w-auto">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-rose-600 flex items-center justify-center shadow-lg shadow-cyan-900/30">
+          <i class="fa-solid fa-shield-virus text-white text-lg"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-black tracking-wider text-white flex items-center gap-2">
+              <span>中國邊境食品安全查驗不合格戰情室</span>
+              <span class="px-2 py-0.5 text-[10px] uppercase font-mono font-bold bg-rose-950/80 border border-rose-500/40 text-rose-300 rounded-full">GACC 官方未准入境通報</span>
+            </h1>
+          </div>
+          <p class="text-xs text-slate-400 font-mono">China Customs (GACC) Border Food Inspection Intelligence Center</p>
+        </div>
+      </div>
+
+      <!-- Database Stock Capsule (單一中國邊境查驗庫存) -->
+      <div class="flex items-center gap-2 px-3 py-1.5 bg-[#0b101c] border border-slate-700/70 rounded-xl text-xs font-mono text-slate-300 shadow-inner">
+        <span class="text-slate-400 font-medium flex items-center gap-1.5">
+          <i class="fa-solid fa-database text-rose-400"></i> 中國海關在案筆數:
+        </span>
+        <span id="dbStatTotal" class="text-cyan-300 font-bold font-mono">0 筆</span>
+        <span id="importedFilesBadge" class="hidden ml-2 px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-600/50 truncate max-w-[200px]" title="已累計匯入的檔案"></span>
+      </div>
+
+      <!-- Control Toolbar Buttons -->
+      <div class="flex items-center gap-2 w-full lg:w-auto justify-end flex-wrap">
+        <!-- 檔案輸入支援多檔選取 (.pdf, .xlsx, .xls, .csv) -->
+        <input type="file" id="fileInput" accept=".pdf, .xlsx, .xls, .csv" multiple class="hidden">
+        
+        <button id="btnImport" onclick="document.getElementById('fileInput').click()" class="px-3 py-1.5 bg-[#0e3b43] hover:bg-[#134e5a] text-cyan-300 border border-cyan-500/40 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-sm" title="支援按住 Ctrl/Cmd 多選多個 PDF，亦可分次重複匯入">
+          <i class="fa-solid fa-file-circle-plus text-rose-400"></i>
+          <span>匯入檔案 (支援多選/累加)</span>
+        </button>
+
+        <button onclick="clearAllDataToFresh()" class="px-2.5 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-700/50 rounded-lg text-xs font-medium flex items-center gap-1.5 transition" title="清空全部資料重新匯入">
+          <i class="fa-solid fa-trash-can"></i>
+          <span>清空數據</span>
+        </button>
+
+        <button onclick="exportFilteredData()" class="px-3 py-1.5 bg-[#15412b] hover:bg-[#1c5539] text-emerald-300 border border-emerald-500/40 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-sm">
+          <i class="fa-solid fa-file-arrow-down"></i>
+          <span>匯出 CSV</span>
+        </button>
+
+        <button onclick="openHandbookModal()" class="px-3 py-1.5 bg-[#1e293b] hover:bg-[#334155] text-slate-200 border border-slate-600 rounded-lg text-xs font-medium flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-book-bookmark text-amber-400"></i>
+          <span>品類與法規指南</span>
+        </button>
+
+        <button onclick="resetAllFilters()" class="px-2.5 py-1.5 bg-rose-900/30 hover:bg-rose-900/50 text-rose-300 border border-rose-700/50 rounded-lg text-xs font-medium flex items-center gap-1.5 transition" title="清除所有過濾">
+          <i class="fa-solid fa-rotate-left"></i>
+          <span>重設</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- PDF Parsing Progress Toast -->
+  <div id="pdfLoadingBanner" class="hidden max-w-[1800px] mx-auto px-4 mt-2">
+    <div class="bg-cyan-950/80 border border-cyan-500/50 text-cyan-200 px-4 py-2.5 rounded-xl text-xs flex items-center justify-between shadow-lg">
+      <div class="flex items-center gap-2.5">
+        <i class="fa-solid fa-spinner fa-spin text-cyan-400 text-sm"></i>
+        <span id="pdfLoadingText" class="font-medium">正在解析 PDF 頁面結構與表格文字...</span>
+      </div>
+      <span class="text-xs font-mono text-cyan-300 font-bold" id="pdfPageProgress">頁次: 0/0</span>
+    </div>
+  </div>
+
+  <main class="flex-1 max-w-[1800px] w-full mx-auto p-3 lg:p-5 flex flex-col gap-4">
+    
+    <!-- Active Filter Banner (Power BI Cross-filter Active) -->
+    <div id="filterBanner" class="hidden items-center justify-between bg-cyan-950/40 border border-cyan-500/40 px-4 py-2 rounded-xl text-xs text-cyan-200 shadow-md">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="font-semibold text-cyan-300 flex items-center gap-1.5">
+          <i class="fa-solid fa-bolt text-amber-400 pulse-glow"></i> Power BI 交叉篩選鎖定中：
+        </span>
+        <span id="activeFilterTags" class="flex gap-2 flex-wrap"></span>
+      </div>
+      <button onclick="resetAllFilters()" class="text-cyan-400 hover:text-white underline font-medium text-xs ml-4 flex items-center gap-1">
+        <i class="fa-solid fa-circle-xmark"></i> 清除所有過濾
+      </button>
+    </div>
+
+    <!-- 4 High Impact KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      
+      <!-- KPI 1: Total Case Count -->
+      <div class="card-panel p-4 kpi-card border-l-4 border-l-rose-500" onclick="resetAllFilters()">
+        <div class="flex justify-between items-start">
+          <div>
+            <span class="text-xs text-slate-400 font-medium">當前查驗不合格總件數</span>
+            <div class="text-2xl font-black text-white mt-1 font-mono tracking-tight flex items-baseline gap-2">
+              <span id="kpiTotalCount">0</span>
+              <span class="text-xs font-normal text-slate-400">件</span>
+            </div>
+          </div>
+          <div class="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
+            <i class="fa-solid fa-ban text-sm"></i>
+          </div>
+        </div>
+        <div class="mt-2 text-[11px] text-slate-400 flex items-center gap-1">
+          <i class="fa-solid fa-circle-info text-rose-400"></i>
+          <span>包含未准入境、銷毀與退運案例</span>
+        </div>
+      </div>
+
+      <!-- KPI 2: Top Origin Country (純產地/出口國) -->
+      <div class="card-panel p-4 kpi-card border-l-4 border-l-cyan-500" id="kpiCardOrigin" onclick="filterByTopOrigin()">
+        <div class="flex justify-between items-start">
+          <div>
+            <span class="text-xs text-slate-400 font-medium">主要出口國 / 原產地 (Country of Origin)</span>
+            <div class="text-xl font-bold text-cyan-300 mt-1 truncate max-w-[200px]" id="kpiTopOrigin">--</div>
+          </div>
+          <div class="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+            <i class="fa-solid fa-globe text-sm"></i>
+          </div>
+        </div>
+        <div class="mt-2 text-[11px] text-slate-400 flex items-center justify-between">
+          <span id="kpiOriginSub">佔比：0%</span>
+          <span class="text-[10px] text-cyan-400 font-mono">點擊可反向過濾</span>
+        </div>
+      </div>
+
+      <!-- KPI 3: Top Hazard Reason -->
+      <div class="card-panel p-4 kpi-card border-l-4 border-l-amber-500" id="kpiCardHazard" onclick="filterByTopHazard()">
+        <div class="flex justify-between items-start">
+          <div>
+            <span class="text-xs text-slate-400 font-medium">首要違規危害方向</span>
+            <div class="text-xl font-bold text-amber-300 mt-1 truncate max-w-[200px]" id="kpiTopHazard">--</div>
+          </div>
+          <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <i class="fa-solid fa-biohazard text-sm"></i>
+          </div>
+        </div>
+        <div class="mt-2 text-[11px] text-slate-400 flex items-center justify-between">
+          <span id="kpiHazardSub">佔比：0%</span>
+          <span class="text-[10px] text-amber-400 font-mono">點擊可反向過濾</span>
+        </div>
+      </div>
+
+      <!-- KPI 4: Top High Risk Product -->
+      <div class="card-panel p-4 kpi-card border-l-4 border-l-emerald-500" id="kpiCardProduct" onclick="filterByTopProduct()">
+        <div class="flex justify-between items-start">
+          <div>
+            <span class="text-xs text-slate-400 font-medium">高頻率上榜食品品類</span>
+            <div class="text-xl font-bold text-emerald-300 mt-1 truncate max-w-[200px]" id="kpiTopProduct">--</div>
+          </div>
+          <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <i class="fa-solid fa-utensils text-sm"></i>
+          </div>
+        </div>
+        <div class="mt-2 text-[11px] text-slate-400 flex items-center justify-between">
+          <span id="kpiProductSub">件數：0 件</span>
+          <span class="text-[10px] text-emerald-400 font-mono">點擊可反向過濾</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      
+      <!-- Chart 1: Country of Origin Treemap / Donut View (純產地/出口國) -->
+      <div class="card-panel p-4 flex flex-col gap-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-sm bg-rose-500"></span>
+            <h2 class="text-sm font-bold text-white tracking-wide">
+              產地 / 出口國家分佈 (Country of Origin / Export Countries)
+            </h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnReturnTopOrigin" onclick="returnTopOrigins()" class="hidden px-2 py-0.5 bg-rose-950/70 hover:bg-rose-900 border border-rose-600/50 text-rose-300 rounded text-xs font-semibold transition">
+              <i class="fa-solid fa-arrow-left"></i> 返回 Top 20 國家
+            </button>
+            <button onclick="toggleOriginViewMode()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-chart-pie text-cyan-400"></i>
+              <span id="originChartTypeLabel">切換為圓餅圖</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Treemap Canvas & Donut Wrapper -->
+        <div class="relative w-full h-[290px] flex items-center justify-center overflow-hidden rounded-lg bg-[#070b13]/60 border border-slate-800/80" id="originContainer">
+          <canvas id="originTreemapCanvas" class="w-full h-full block cursor-pointer"></canvas>
+          <canvas id="originDonutCanvas" class="w-full h-full hidden"></canvas>
+          <div id="treemapTooltip" class="absolute hidden pointer-events-none bg-[#0f172a]/95 border border-cyan-500/60 rounded-lg px-3 py-2 text-xs text-white shadow-xl z-30 font-sans">
+            <div id="ttTitle" class="font-bold text-cyan-300"></div>
+            <div id="ttDetail" class="text-slate-300 mt-0.5"></div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80 pt-2 font-mono">
+          <span class="text-cyan-400 flex items-center gap-1">
+            <i class="fa-solid fa-earth-americas"></i>
+            <span id="originStatusLabel">第 1 層：Top 20 出口國 + 長尾其他 (點擊「其他」下鑽)</span>
+          </span>
+          <span class="text-slate-500">面積大小對應通報案件數</span>
+        </div>
+      </div>
+
+      <!-- Chart 2: Hazard Reason 3-tier Drilldown (大類 -> 中類10大項 -> 具體物質) -->
+      <div class="card-panel p-4 flex flex-col gap-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-sm bg-amber-400"></span>
+            <h2 class="text-sm font-bold text-white tracking-wide">
+              危害原因分類排行 (Hazard Hierarchy 3-Tier)
+            </h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnReturnHazard" onclick="stepUpHazardLevel()" class="hidden px-2 py-0.5 bg-amber-950/70 hover:bg-amber-900 border border-amber-600/50 text-amber-300 rounded text-xs font-semibold transition">
+              <i class="fa-solid fa-arrow-left"></i> 回上一層
+            </button>
+            <span class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-amber-950/60 text-amber-300 border border-amber-600/40" id="hazardLevelBadge">
+              Tier 1: 5大危害大類
+            </span>
+          </div>
+        </div>
+
+        <div class="relative w-full h-[290px]">
+          <canvas id="chartHazardCanvas"></canvas>
+        </div>
+
+        <div class="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80 pt-2 font-mono">
+          <span class="text-amber-400 flex items-center gap-1">
+            <i class="fa-solid fa-hand-pointer text-xs"></i>
+            <span id="hazardFooterHint">點擊長條柱依序下鑽：大類 ➔ 標準中類 ➔ 具體物質細項</span>
+          </span>
+          <span class="text-slate-500 font-mono" id="hazardLevelIndicator">1/3 階</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      
+      <!-- Chart 3: Inspection Time Trend (Year -> Month Drilldown) -->
+      <div class="card-panel p-4 flex flex-col gap-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-sm bg-cyan-400"></span>
+            <h2 class="text-sm font-bold text-white tracking-wide">
+              通報時間趨勢 (Inspection Timeline & Trends)
+            </h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnReturnTrend" onclick="stepUpTrendLevel()" class="hidden px-2 py-0.5 bg-cyan-950/70 hover:bg-cyan-900 border border-cyan-600/50 text-cyan-300 rounded text-xs font-semibold transition">
+              <i class="fa-solid fa-arrow-left"></i> 回年度總覽
+            </button>
+            <span class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-cyan-950/60 text-cyan-300 border border-cyan-600/40" id="trendLevelBadge">
+              年度總覽 (Yearly)
+            </span>
+          </div>
+        </div>
+
+        <div class="relative w-full h-[290px]">
+          <canvas id="chartTrendCanvas"></canvas>
+        </div>
+
+        <div class="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80 pt-2 font-mono">
+          <span class="text-cyan-400 flex items-center gap-1">
+            <i class="fa-solid fa-chart-line text-xs"></i>
+            <span id="trendFooterHint">點擊年份柱下鑽 1~12 月走勢；點擊單月柱鎖定當月數據</span>
+          </span>
+          <span class="text-slate-500 font-mono" id="trendViewIndicator">年度累積</span>
+        </div>
+      </div>
+
+      <!-- Chart 4: Product 3-Tier Hierarchy Chart -->
+      <div class="card-panel p-4 flex flex-col gap-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-sm bg-emerald-400"></span>
+            <h2 class="text-sm font-bold text-white tracking-wide">
+              產品品類分析 (Product Categories & 3-Tier Drilldown)
+            </h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnReturnProduct" onclick="stepUpProductLevel()" class="hidden px-2 py-0.5 bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-600/50 text-emerald-300 rounded text-xs font-semibold transition">
+              <i class="fa-solid fa-arrow-left"></i> 回上一層
+            </button>
+            <span class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-emerald-950/60 text-emerald-300 border border-emerald-600/40" id="productLevelBadge">
+              Tier 1: 16大標準品類
+            </span>
+          </div>
+        </div>
+
+        <div class="relative w-full h-[290px]">
+          <canvas id="chartProductCanvas"></canvas>
+        </div>
+
+        <div class="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80 pt-2 font-mono">
+          <span class="text-emerald-400 flex items-center gap-1">
+            <i class="fa-solid fa-sitemap text-xs"></i>
+            <span id="productFooterHint">點擊品類下鑽次分類 ➔ 點擊次分類下鑽具體品名細項</span>
+          </span>
+          <span class="text-slate-500 font-mono" id="productViewIndicator">1/3 階 (品類)</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="card-panel p-4 flex flex-col gap-3 border border-indigo-900/40">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-3 h-3 rounded-full bg-indigo-500 pulse-glow"></div>
+          <div>
+            <h2 class="text-sm font-bold text-white tracking-wide">
+              單一食品種類 · 全歷史時間點軌跡圖 (Single-Product All-Timeline Matrix)
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">鎖定單一品類縱覽歷史爆發月份與危害類型；亦可選擇「全部食品種類」整合觀測</p>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-slate-400">觀測食品品類:</span>
+          <select id="matrixProductSelect" onchange="onMatrixProductChange(this.value)" class="bg-[#0b101c] border border-slate-700 text-cyan-300 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-500 font-medium">
+            <option value="ALL">🌟 全部食品種類 (全覽)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="timelineMatrixContainer" class="w-full overflow-x-auto py-2">
+        <div id="timelineMatrixGrid" class="flex gap-2 min-w-[700px]"></div>
+      </div>
+
+      <div class="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80 pt-2 font-mono">
+        <div class="flex items-center gap-4">
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-rose-500/80"></span> 高度警戒 (3件以上)</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-amber-500/80"></span> 中度警戒 (1-2件)</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-slate-800 border border-slate-700"></span> 安全 / 無通報</span>
+        </div>
+        <span class="text-indigo-400 font-medium">點選任意月份方塊可直接聯動全頁面</span>
+      </div>
+    </div>
+
+    <div class="card-panel p-4 flex flex-col gap-3">
+      
+      <!-- Table Header Toolbar -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-sm bg-cyan-400"></span>
+            <h2 class="text-base font-bold text-white tracking-wide">
+              邊境查驗數據分析明細表 (Border Inspection Data Records)
+            </h2>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">
+            完整整合查驗機構、原產地/口岸、16大品類、3層危害分類、發布日期與處置決定
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <div class="relative min-w-[240px]">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="tableSearchInput" oninput="handleTableSearch()" placeholder="搜尋品名、產地/關口、原因、案號..." class="w-full pl-8 pr-3 py-1.5 bg-[#0b101c] border border-slate-700 focus:border-cyan-500 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500">
+          </div>
+
+          <div class="flex items-center gap-1.5 text-xs text-slate-400">
+            <span>每頁:</span>
+            <select id="pageSizeSelect" onchange="changePageSize(this.value)" class="bg-[#0b101c] border border-slate-700 text-white rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-cyan-500">
+              <option value="5">5 筆</option>
+              <option value="10" selected>10 筆</option>
+              <option value="20">20 筆</option>
+              <option value="50">50 筆</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table Body Container -->
+      <div class="overflow-x-auto rounded-lg border border-slate-800">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-[#0b101c] text-slate-400 uppercase font-mono tracking-wider border-b border-slate-800">
+            <tr>
+              <th scope="col" class="px-3.5 py-2.5">通報日期</th>
+              <th scope="col" class="px-3.5 py-2.5">案號 / 關口</th>
+              <th scope="col" class="px-3.5 py-2.5">產地 / 出口國</th>
+              <th scope="col" class="px-3.5 py-2.5">產品名稱 (品類標籤)</th>
+              <th scope="col" class="px-3.5 py-2.5">危害分類 (Tier 1 ➔ 2 ➔ 3)</th>
+              <th scope="col" class="px-3.5 py-2.5">處置結果</th>
+              <th scope="col" class="px-3.5 py-2.5 text-center">卷宗</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-slate-800/60 font-sans"></tbody>
+        </table>
+      </div>
+
+      <!-- Table Pagination Controls -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 text-xs text-slate-400">
+        <div id="tableInfoText" class="font-mono">顯示第 0 至 0 筆，共 0 筆</div>
+        <div class="flex items-center gap-1.5">
+          <button id="btnPrevPage" onclick="prevTablePage()" class="px-2.5 py-1 rounded bg-[#0b101c] hover:bg-slate-800 border border-slate-700 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed">
+            <i class="fa-solid fa-chevron-left"></i> 上一頁
+          </button>
+          <span id="pageIndicator" class="px-2 font-mono text-cyan-400">1 / 1</span>
+          <button id="btnNextPage" onclick="nextTablePage()" class="px-2.5 py-1 rounded bg-[#0b101c] hover:bg-slate-800 border border-slate-700 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed">
+            下一頁 <i class="fa-solid fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Case Dossier Modal Dialog -->
+  <div id="caseModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#0f172a] border border-cyan-500/50 rounded-2xl max-w-2xl w-full p-6 text-slate-200 shadow-2xl relative">
+      <button onclick="closeCaseModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="flex items-center gap-2.5 border-b border-slate-800 pb-3">
+        <div class="w-8 h-8 rounded-lg bg-cyan-600/20 text-cyan-400 flex items-center justify-center font-bold">
+          <i class="fa-solid fa-file-shield"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-white" id="modalCaseId">案卷詳情</h3>
+          <p class="text-xs text-cyan-400 font-mono" id="modalCaseDate">發布日期：--</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 my-4 text-xs">
+        <div class="bg-[#0b101c] p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-400 block font-mono">產品名稱:</span>
+          <span class="text-white font-bold text-sm" id="modalProductName">--</span>
+          <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] bg-emerald-950/80 text-emerald-400 border border-emerald-600/50" id="modalCategoryBadge">--</span>
+        </div>
+        <div class="bg-[#0b101c] p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-400 block font-mono">來源地 / 查驗關口:</span>
+          <span class="text-cyan-300 font-bold text-sm" id="modalOrigin">--</span>
+          <span class="block text-slate-400 text-[11px] mt-1" id="modalImporter">進口商/申報者：--</span>
+        </div>
+        <div class="col-span-2 bg-[#0b101c] p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-400 block font-mono">不合格原因 / 檢驗數值:</span>
+          <p class="text-amber-300 font-medium mt-1 leading-relaxed" id="modalReason">--</p>
+          <div class="flex gap-2 mt-2">
+            <span class="px-2 py-0.5 rounded text-[10px] bg-amber-950 text-amber-400 border border-amber-600/40" id="modalHazardMajor">--</span>
+            <span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700" id="modalHazardSub">--</span>
+          </div>
+        </div>
+        <div class="col-span-2 bg-[#0b101c] p-3 rounded-lg border border-slate-800 flex justify-between items-center">
+          <div>
+            <span class="text-slate-400 block font-mono">邊境處置處分:</span>
+            <span class="text-rose-400 font-bold" id="modalDecision">退運或銷毀</span>
+          </div>
+          <div>
+            <span class="text-slate-400 block font-mono text-right">查驗體系:</span>
+            <span class="text-white font-bold" id="modalJurisdiction">中國海關 (GACC)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Regulatory Handbook & 16-Category Modal Dialog -->
+  <div id="handbookModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#0f172a] border border-slate-700 rounded-2xl max-w-3xl w-full p-6 text-slate-200 shadow-2xl relative max-h-[85vh] flex flex-col">
+      <button onclick="closeHandbookModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="flex items-center gap-2.5 border-b border-slate-800 pb-3">
+        <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+          <i class="fa-solid fa-book-open"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-white">食品品類標準規範與危害分類指南</h3>
+          <p class="text-xs text-slate-400">依據附件 16 大標準品類架構、肉品分類原則與化學危害 10 大核心分類</p>
+        </div>
+      </div>
+
+      <div class="flex-1 overflow-y-auto space-y-4 my-4 pr-1 text-xs">
+        <!-- GACC 官方未准入境 9 大典型事實對照基準 -->
+        <div class="bg-[#0b101c] p-3 rounded-lg border border-amber-500/50 shadow-inner">
+          <h4 class="font-bold text-amber-300 mb-2 flex items-center gap-1.5">
+            <i class="fa-solid fa-scale-balanced"></i> 中國海關總署 GACC 未准入境 9 大典型事實三層對照規範
+          </h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-[11px] border border-slate-800 rounded">
+              <thead class="bg-slate-900 text-slate-400 font-mono border-b border-slate-800">
+                <tr>
+                  <th class="p-2">未准入境的事實原文</th>
+                  <th class="p-2 text-cyan-400">Tier 1 (危害大類)</th>
+                  <th class="p-2 text-amber-400">Tier 2 (危害中類)</th>
+                  <th class="p-2 text-emerald-400">Tier 3 (具體細項/標籤)</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60 text-slate-300 font-mono">
+                <tr>
+                  <td class="p-2 text-white font-medium">感官检验不符合食品安全国家标准规定</td>
+                  <td class="p-2 text-purple-300">不符合國家標準 (品質指標)</td>
+                  <td class="p-2">感官檢驗不符合國家標準</td>
+                  <td class="p-2 text-emerald-300">感官檢驗不符合國家標準規定</td>
+                </tr>
+                <tr>
+                  <td class="p-2 text-white font-medium">叶绿素铜钠不符合食品安全国家标准规定</td>
+                  <td class="p-2 text-amber-300">化學性危害</td>
+                  <td class="p-2">食品添加物不符規定（Food Additives Misuse）</td>
+                  <td class="p-2 text-emerald-300">葉綠素銅鈉超標/不符規定</td>
+                </tr>
+                <tr>
+                  <td class="p-2 text-white font-medium">检出未经批准的转基因成分</td>
+                  <td class="p-2 text-amber-300">化學性危害</td>
+                  <td class="p-2">非法添加物/未授權物質（Unauthorized Substances）</td>
+                  <td class="p-2 text-emerald-300">檢出未經批准的轉基因成分 (GMO)</td>
+                </tr>
+                <tr>
+                  <td class="p-2 text-white font-medium">未按要求提供证书或合格证明 / ...材料</td>
+                  <td class="p-2 text-cyan-300">標示與法規程序</td>
+                  <td class="p-2">邊境文件、標示與輸入程序違規</td>
+                  <td class="p-2 text-emerald-300">未按要求提供證書或合格證明材料</td>
+                </tr>
+                <tr>
+                  <td class="p-2 text-white font-medium">保质期不符合食品安全国家标准规定</td>
+                  <td class="p-2 text-cyan-300">標示與法規程序</td>
+                  <td class="p-2">邊境文件、標示與輸入程序違規</td>
+                  <td class="p-2 text-emerald-300">保質期不符合國家標準規定</td>
+                </tr>
+                <tr>
+                  <td class="p-2 text-white font-medium">产品未获准入</td>
+                  <td class="p-2 text-cyan-300">標示與法規程序</td>
+                  <td class="p-2">邊境文件、標示與輸入程序違規</td>
+                  <td class="p-2 text-emerald-300">產品未獲海關准入資格</td>
+                </tr>
+                <tr>
+                  <td class="p-2 text-white font-medium">精氨酸不符合食品安全国家标准规定</td>
+                  <td class="p-2 text-amber-300">化學性危害</td>
+                  <td class="p-2">食品添加物不符規定（Food Additives Misuse）</td>
+                  <td class="p-2 text-emerald-300">精氨酸等營養強化劑不符規定</td>
+                </tr>
+                <tr>
+                  <td class="p-2 text-white font-medium">检出动物疫病</td>
+                  <td class="p-2 text-rose-300">生物性危害</td>
+                  <td class="p-2">檢出動物疫病與檢疫性病原</td>
+                  <td class="p-2 text-emerald-300">檢出動物疫病 (檢疫性病原)</td>
+                </tr>
+                <tr>
+                  <td class="p-2 text-white font-medium">镉检验值不符合食品安全国家标准规定</td>
+                  <td class="p-2 text-amber-300">化學性危害</td>
+                  <td class="p-2">重金屬（Heavy Metals）</td>
+                  <td class="p-2 text-emerald-300">重金屬鎘 (Cd) 檢驗值超標</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-[#0b101c] p-3 rounded-lg border border-slate-800">
+          <h4 class="font-bold text-cyan-400 mb-1 flex items-center gap-1.5">
+            <i class="fa-solid fa-list-check"></i> 16 大標準品類判定與肉品原料原則
+          </h4>
+          <p class="text-slate-300 leading-relaxed">
+            1. <strong class="text-white">單一原肉原料</strong>：雞肉原料、豬肉原料、牛肉原料、羊肉原料、魚類原料等生鮮未加工單一原肉，均標記為「單獨一類無須次分」，點擊長條柱直接鎖定全域篩選，不進入第二層。<br>
+            2. <strong class="text-white">其他食品 (15類)</strong>：支援向下探勘次分類（酒類、乳製品、麵條、糖果糕點、飲料、烘焙粉類、萃取蛋白、罐頭、其餘加工品）。<br>
+            3. <strong class="text-white">調味與香辛料 (9類)</strong>：支援次分類（調味醬料、香辛料、糖、鹽、裹粉）。<br>
+            4. <strong class="text-white">海鮮原料 (6類)</strong>：支援次分類（生鮮甲殼類、軟體與棘皮類、貝類）。
+          </p>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-slate-800">
+        <button onclick="closeHandbookModal()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold">
+          關閉指南
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 全球主要出口國標準對照字典（繁簡雙向對齊與正規化，杜絕企業名稱誤入）
+    const STANDARD_COUNTRY_MAP = {
+      '澳大利亚': '澳大利亞', '澳洲': '澳大利亞', 'australia': '澳大利亞', 'au': '澳大利亞',
+      '韩国': '韓國', '南韩': '韓國', 'korea': '韓國', 'south korea': '韓國', 'kr': '韓國',
+      '日本': '日本', 'japan': '日本', 'jp': '日本',
+      '俄罗斯': '俄羅斯', '俄国': '俄羅斯', 'russia': '俄羅斯', 'ru': '俄羅斯',
+      '越南': '越南', 'vietnam': '越南', 'vn': '越南',
+      '泰国': '泰國', 'thailand': '泰國', 'th': '泰國',
+      '印度': '印度', 'india': '印度', 'in': '印度',
+      '印度尼西亚': '印尼', '印尼': '印尼', 'indonesia': '印尼', 'id': '印尼',
+      '新西兰': '紐西蘭', '纽西兰': '紐西蘭', 'new zealand': '紐西蘭', 'nz': '紐西蘭',
+      '马来西亚': '馬來西亞', 'malaysia': '馬來西亞', 'my': '馬來西亞',
+      '菲律宾': '菲律賓', 'philippines': '菲律賓', 'ph': '菲律賓',
+      '台湾': '台灣', '中国台湾': '台灣', 'taiwan': '台灣', 'tw': '台灣',
+      '香港': '香港', '中国香港': '香港', 'hong kong': '香港', 'hk': '香港',
+      '澳门': '澳門', '中国澳门': '澳門', 'macau': '澳門', 'mo': '澳門',
+      '新加坡': '新加坡', 'singapore': '新加坡', 'sg': '新加坡',
+      '缅甸': '緬甸', 'myanmar': '緬甸', 'burma': '緬甸',
+      '柬埔寨': '柬埔寨', 'cambodia': '柬埔寨',
+      '老挝': '寮國', '寮国': '寮國', 'laos': '寮國',
+      '巴基斯坦': '巴基斯坦', 'pakistan': '巴基斯坦',
+      '孟加拉国': '孟加拉', '孟加拉': '孟加拉', 'bangladesh': '孟加拉',
+      '阿曼': '阿曼', 'oman': '阿曼', 'om': '阿曼',
+      '土耳其': '土耳其', 'turkey': '土耳其', 'türkiye': '土耳其', 'tr': '土耳其',
+      '巴布亚新几内亚': '巴布亞紐幾內亞', 'papua new guinea': '巴布亞紐幾內亞',
+      '格陵兰': '格陵蘭', 'greenland': '格陵蘭',
+      '美国': '美國', '美利坚': '美國', 'usa': '美國', 'united states': '美國', 'us': '美國',
+      '加拿大': '加拿大', 'canada': '加拿大', 'ca': '加拿大',
+      '墨西哥': '墨西哥', 'mexico': '墨西哥', 'mx': '墨西哥',
+      '智利': '智利', 'chile': '智利', 'cl': '智利',
+      '巴西': '巴西', 'brazil': '巴西', 'brasil': '巴西', 'br': '巴西',
+      '厄瓜多尔': '厄瓜多', '厄瓜多': '厄瓜多', 'ecuador': '厄瓜多', 'ec': '厄瓜多',
+      '阿根廷': '阿根廷', 'argentina': '阿根廷', 'ar': '阿根廷',
+      '秘鲁': '秘魯', 'peru': '秘魯', 'pe': '秘魯',
+      '乌拉圭': '烏拉圭', 'uruguay': '烏拉圭', 'uy': '烏拉圭',
+      '哥伦比亚': '哥倫比亞', 'colombia': '哥倫比亞',
+      '哥斯达黎加': '哥斯大黎加', 'costa rica': '哥斯大黎加',
+      '委内瑞拉': '委內瑞拉', 'venezuela': '委內瑞拉',
+      '德国': '德國', 'germany': '德國', 'de': '德國',
+      '法国': '法國', 'france': '法國', 'fr': '法國',
+      '西班牙': '西班牙', 'spain': '西班牙', 'es': '西班牙',
+      '意大利': '義大利', 'italy': '義大利', 'it': '義大利',
+      '英国': '英國', 'united kingdom': '英國', 'uk': '英國', 'gb': '英國',
+      '荷兰': '荷蘭', 'netherlands': '荷蘭', 'nl': '荷蘭',
+      '比利时': '比利時', 'belgium': '比利時', 'be': '比利時',
+      '丹麦': '丹麥', 'denmark': '丹麥', 'dk': '丹麥',
+      '挪威': '挪威', 'norway': '挪威', 'no': '挪威',
+      '爱尔兰': '愛爾蘭', 'ireland': '愛爾蘭', 'ie': '愛爾蘭',
+      '葡萄牙': '葡萄牙', 'portugal': '葡萄牙', 'pt': '葡萄牙',
+      '瑞士': '瑞士', 'switzerland': '瑞士', 'ch': '瑞士',
+      '奥地利': '奧地利', 'austria': '奧地利', 'at': '奧地利',
+      '白俄罗斯': '白俄羅斯', 'belarus': '白俄羅斯', 'by': '白俄羅斯',
+      '摩尔多瓦': '摩爾多瓦', 'moldova': '摩爾多瓦', 'md': '摩爾多瓦',
+      '塞内加尔': '塞內加爾', 'senegal': '塞內加爾', 'sn': '塞內加爾',
+      '法罗群岛': '法羅群島', 'faroe islands': '法羅群島',
+      '乌兹别克斯坦': '烏茲別克', 'uzbekistan': '烏茲別克',
+      '哈萨克斯坦': '哈薩克', 'kazakhstan': '哈薩克',
+      '坦桑尼亚': '坦尚尼亞', 'tanzania': '坦尚尼亞',
+      '朝鲜': '北韓', 'north korea': '北韓'
+    };
+
+    const ENTERPRISE_BLACKLIST_REGEX = /\b(s\.?a\.?|ltd|corp|inc|llc|gmbh|jsc|co\.|company|procesa|proposo|pravin|pilgrim|jbs|lago|priscil|prepare|cricova|pcc|con|industry|farms|factory|group|trading|distillery|spirits|enterprise|commercial|exportadora|alimentos|sociedad|anonima|limitada|sp\.?\s*z\s*o\.?o\.?|bv|srl|pty|cooperativa|agro|seafood|fishery|dairy|winery|brewery)\b/i;
+
+    const S2T_MAP = {
+      '国': '國', '产': '產', '检': '檢', '验': '驗', '准': '准', '入': '入',
+      '境': '境', '实': '實', '标': '標', '准': '準', '规': '規', '定': '定',
+      '铜': '銅', '钠': '鈉', '绿': '綠', '叶': '葉', '因': '因', '转': '轉',
+      '基': '基', '证': '證', '书': '書', '质': '質', '期': '期', '获': '獲',
+      '氨': '氨', '酸': '酸', '动': '動', '物': '物', '疫': '疫', '病': '病',
+      '镉': '鎘', '铅': '鉛', '鸡': '雞', '猪': '豬', '鱼': '魚', '虾': '蝦',
+      '蟹': '蟹', '贝': '貝', '软': '軟', '体': '體', '壳': '殼', '鲜': '鮮',
+      '油': '油', '脂': '脂', '粉': '粉', '酱': '醬', '汤': '湯', '亚': '亞',
+      '硫': '硫', '矾': '礬', '霉': '黴', '总': '總', '数': '數', '群': '群',
+      '菌': '菌', '异': '異', '杂': '雜', '包': '包', '装': '裝', '损': '損',
+      '渗': '滲', '漏': '漏', '变': '變', '形': '形', '关': '關', '口': '口',
+      '岸': '岸', '单': '單', '号': '號', '注': '註', '册': '冊', '企': '企',
+      '业': '業', '进': '進', '商': '商', '备': '備', '案': '案', '重': '重',
+      '量': '量', '处': '處', '置': '置', '决': '決', '销': '銷', '毁': '毀',
+      '退': '退', '运': '運', '结': '結', '果': '果', '麦': '麥', '米': '米',
+      '糖': '糖', '盐': '鹽', '奶': '奶', '乳': '乳', '酪': '酪', '酒': '酒',
+      '茶': '茶', '咖': '咖', '啡': '啡', '干': '乾', '柠': '檸', '檬': '檬',
+      '黄': '黃', '红': '紅', '蓝': '藍', '素': '素', '剂': '劑', '防': '防',
+      '腐': '腐', '甜': '甜', '蜜': '蜜', '精': '精', '药': '藥', '残': '殘',
+      '留': '留', '虫': '蟲', '害': '害', '生': '生', '线': '線', '绦': '絛',
+      '吸': '吸', '囊': '囊', '寄': '寄', '温': '溫', '度': '度', '链': '鏈',
+      '冷': '冷', '冻': '凍', '储': '儲', '存': '存', '秽': '穢', '败': '敗',
+      '挥': '揮', '发': '發', '氮': '氮', '过': '過', '氧': '氧', '化': '化',
+      '值': '值', '矿': '礦', '烃': '烴', '邻': '鄰', '苯': '苯', '甲': '甲',
+      '酯': '酯', '类': '類', '型': '型', '项': '項'
+    };
+
+    function toTraditionalChinese(str) {
+      if (!str) return '';
+      let res = '';
+      for (let i = 0; i < str.length; i++) {
+        res += S2T_MAP[str[i]] || str[i];
+      }
+      return res;
+    }
+
+    const T2S_MAP = {};
+    for (const [s, t] of Object.entries(S2T_MAP)) {
+      T2S_MAP[t] = s;
+    }
+
+    function toSimplifiedChinese(str) {
+      if (!str) return '';
+      let res = '';
+      for (let i = 0; i < str.length; i++) {
+        res += T2S_MAP[str[i]] || str[i];
+      }
+      return res;
+    }
+
+    function formatCategorySimple(cat) {
+      if (!cat) return '其他食品';
+      const c = String(cat).trim();
+      if (c.includes('豬肉') || c.startsWith('2.')) return '豬肉原料';
+      if (c.includes('雞肉') || c.includes('禽肉') || c.startsWith('1.')) return '雞肉原料';
+      if (c.includes('牛肉') || c.startsWith('3.')) return '牛肉原料';
+      if (c.includes('羊肉') || c.startsWith('4.')) return '羊肉原料';
+      if (c.includes('魚類') || c.startsWith('5.')) return '魚類原料';
+      if (c.includes('海鮮') || c.startsWith('6.')) return '海鮮原料';
+      if (c.includes('添加物') || c.includes('添加劑') || c.startsWith('7.')) return '食品添加物';
+      if (c.includes('油脂') || c.startsWith('8.')) return '食用油脂';
+      if (c.includes('裹粉') || c.includes('調味') || c.includes('香辛') || c.startsWith('9.')) return '調味與香辛料';
+      if (c.includes('液蛋') || c.startsWith('10.')) return '液蛋';
+      if (c.includes('帶殼蛋') || c.startsWith('11.')) return '帶殼蛋';
+      if (c.includes('白米') || c.startsWith('12.')) return '農產白米';
+      if (c.includes('蔬果') || c.startsWith('13.')) return '農產蔬果';
+      if (c.includes('中藥') || c.startsWith('14.')) return '中藥';
+      if (c.includes('物料') || c.includes('包材') || c.startsWith('16.')) return '物料包材';
+      if (c.includes('市售') || c.includes('其它') || c.includes('其他') || c.includes('包裝食品') || c.startsWith('15.')) return '其他食品';
+      return c.replace(/^\d+[\.、\s]*/, '');
+    }
+
+    function cleanDisplayProductName(rawProd) {
+      if (!rawProd) return '';
+      let p = String(rawProd).trim();
+      p = p.replace(/\b\d{12,24}(-\d+)?\b/g, ' ');
+      p = p.replace(/0\d{16,22}(-\d+)?/g, ' ');
+      p = p.replace(/91\d{14,18}[A-Z0-9]?/gi, ' ');
+      p = p.replace(/\b[A-Z]{3,4}\d{10,20}\b/gi, ' ');
+      p = p.replace(/SB\s*PORK\s*A\/S/gi, ' ');
+      p = p.replace(/[\u4e00-\u9fa5]+(有限公司|商貿公司|進出口公司|供應鏈|合作社|會社|貿易行|商行)/g, ' ');
+      p = p.replace(/\b(s\.?a\.?|ltd|corp|inc|llc|gmbh|jsc|co\.|company|pty)\b/gi, ' ');
+      p = p.replace(/^(俄羅斯|丹麥|厄瓜多|美國|日本|德國|澳洲|澳大利亞|韓國|巴西|阿曼|緬甸|泰國|越南|巴基斯坦)$/gi, '');
+      p = p.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+      return toTraditionalChinese(p);
+    }
+
+    function formatPortName(port) {
+      if (!port) return '中國海關';
+      let p = toTraditionalChinese(port).trim();
+      p = p.replace(/(海關|海关)+$/g, '').trim();
+      return p ? p + '海關' : '中國海關';
+    }
+
+    function sanitizeCountryOnly(rawStr, rowPiecesText) {
+      const cleanRaw = (rawStr || '').trim();
+
+      if (STANDARD_COUNTRY_MAP[cleanRaw]) return STANDARD_COUNTRY_MAP[cleanRaw];
+      if (STANDARD_COUNTRY_MAP[cleanRaw.toLowerCase()]) return STANDARD_COUNTRY_MAP[cleanRaw.toLowerCase()];
+
+      if (cleanRaw && !ENTERPRISE_BLACKLIST_REGEX.test(cleanRaw)) {
+        for (const [key, stdName] of Object.entries(STANDARD_COUNTRY_MAP)) {
+          if (cleanRaw.toLowerCase().includes(key.toLowerCase())) return stdName;
+        }
+      }
+
+      const searchContext = `${cleanRaw} ${rowPiecesText || ''}`;
+      const sortedKeys = Object.keys(STANDARD_COUNTRY_MAP).sort((a, b) => b.length - a.length);
+      for (const key of sortedKeys) {
+        const stdName = STANDARD_COUNTRY_MAP[key];
+        const re = new RegExp(`(^|[^a-zA-Z0-9\u4e00-\u9fa5])${key}([^a-zA-Z0-9\u4e00-\u9fa5]|$)`, 'i');
+        if (re.test(searchContext)) return stdName;
+      }
+
+      if (/^[\u4e00-\u9fa5]{2,6}$/.test(cleanRaw) && !cleanRaw.includes('公司') && !cleanRaw.includes('企業')) {
+        return STANDARD_COUNTRY_MAP[cleanRaw] || toTraditionalChinese(cleanRaw);
+      }
+
+      return '未標示國家';
+    }
+
+    const PRODUCT_CATEGORIES_16 = [
+      '1.雞肉&其它禽肉原料', '2.豬肉原料', '3.牛肉原料', '4.羊肉原料', '5.魚類原料',
+      '6.海鮮原料', '7.食品添加物', '8.食用油脂(大宗)', '9.裹粉/調味粉(醬/液)/香辛料',
+      '10.液蛋', '11.農產-帶殼蛋', '12.農產-白米', '13.農產-蔬果', '14.中藥',
+      '15.其它-市售包裝食品', '16.物料/包材'
+    ];
+
+    const RAW_MEAT_CATEGORIES = [
+      '1.雞肉&其它禽肉原料', '2.豬肉原料', '3.牛肉原料', '4.羊肉原料', '5.魚類原料'
+    ];
+
+    const INITIAL_CHINA_DATASET = [
+      { uid: "GACC_202601_01", id: "1", date: "2026/01/12", port: "上海海關", country: "智利", product: "鮮櫻桃", category: "13.農產-蔬果", subCategory: "生鮮水果", major: "化學性危害", subHazard: "農藥殘留（Pesticides）", tier3: "待克利 (Difenoconazole) 殘留超標", detail: "待克利 (Difenoconazole) 殘留超標 0.05mg/kg", decision: "退運或銷毀", importer: "上海國際果品供應鏈有限公司", overseasFirm: "Exportadora Valle Central S.A." },
+      { uid: "GACC_202601_02", id: "2", date: "2026/01/20", port: "深圳海關", country: "泰國", product: "鮮榴槤", category: "13.農產-蔬果", subCategory: "生鮮水果", major: "化學性危害", subHazard: "食品添加物不符規定（Food Additives Misuse）", tier3: "超範圍/超限量使用食品著色劑", detail: "檢出黃色薑黃色素/未准用著色劑", decision: "退運", importer: "深圳泰鮮貿易商行", overseasFirm: "Thai Fresh Fruit Co., Ltd." },
+      { uid: "GACC_202602_05", id: "5", date: "2026/02/08", port: "黃埔海關", country: "越南", product: "冷凍巴沙魚柳", category: "5.魚類原料", subCategory: "5.魚類原料", major: "化學性危害", subHazard: "動物用藥殘留（Veterinary Drug Residues）", tier3: "孔雀石綠殘留", detail: "孔雀石綠 (Malachite Green) 檢出 1.2ppb", decision: "銷毀", importer: "廣州水產進出口公司", overseasFirm: "Mekong Delta Seafood JSC" },
+      { uid: "GACC_202602_18", id: "18", date: "2026/02/22", port: "天津海關", country: "澳大利亞", product: "冷凍去骨牛肉", category: "3.牛肉原料", subCategory: "3.牛肉原料", major: "標示與法規程序", subHazard: "邊境文件、標示與輸入程序違規", tier3: "未按要求提供證書或合格證明材料", detail: "貨證不符，製造廠未完成在華註冊登記", decision: "退運", importer: "北京大宗肉類進口有限公司", overseasFirm: "Australian Beef Processing Pty Ltd" },
+      { uid: "GACC_202603_03", id: "3", date: "2026/03/15", port: "寧波海關", country: "日本", product: "威士忌酒", category: "15.其它-市售包裝食品", subCategory: "酒類及酒精飲料", major: "標示與法規程序", subHazard: "邊境文件、標示與輸入程序違規", tier3: "標籤標示不符合國家標準規定", detail: "產地證明文件不全，標籤無中文規範", decision: "退運", importer: "寧波港酒類供應商", overseasFirm: "Fuji Spirits Distillery Corp." },
+      { uid: "GACC_202603_21", id: "21", date: "2026/03/28", port: "青島海關", country: "美國", product: "開心果 (堅果)", category: "15.其它-市售包裝食品", subCategory: "糖果糕點與零食點心", major: "化學性危害", subHazard: "真菌毒素/黃麴毒素（Mycotoxins）", tier3: "黃麴毒素 (Aflatoxins) 超標", detail: "黃麴毒素 B1 超標 (15μg/kg)", decision: "退運", importer: "青島堅果加工業有限公司", overseasFirm: "California Nut Growers LLC" },
+      { uid: "GACC_202604_04", id: "4", date: "2026/04/10", port: "大連海關", country: "俄羅斯", product: "冷凍鯡魚", category: "5.魚類原料", subCategory: "5.魚類原料", major: "生物性危害", subHazard: "檢疫性有害生物與寄生蟲", tier3: "檢出異尖線蟲幼蟲活力超標", detail: "檢出異尖線蟲幼蟲活力超標", decision: "銷毀", importer: "遼寧遠洋水產進出口", overseasFirm: "Far East Marine Fishery OJSC" },
+      { uid: "GACC_202604_19", id: "19", date: "2026/04/25", port: "廈門海關", country: "台灣", product: "即食肉燥麵", category: "15.其它-市售包裝食品", subCategory: "麵條與即食麵製品", major: "化學性危害", subHazard: "食品添加物不符規定（Food Additives Misuse）", tier3: "防腐劑超標 (苯甲酸/山梨酸)", detail: "油包檢出防腐劑苯甲酸超標", decision: "退運", importer: "廈門兩岸貿易商行", overseasFirm: "台灣統一味全供應鏈" },
+      { uid: "GACC_202605_02", id: "2", date: "2026/05/11", port: "廣州海關", country: "馬來西亞", product: "白咖啡固體飲料", category: "15.其它-市售包裝食品", subCategory: "咖啡茶飲與飲料", major: "化學性危害", subHazard: "非法添加物/未授權物質（Unauthorized Substances）", tier3: "西地那非/藥品活性成分 (Sildenafil)", detail: "檢出雙氯芬酸與西地那非成分", decision: "銷毀", importer: "廣東南洋健品有限公司", overseasFirm: "Ipoh Old Town Beverage Sdn Bhd" },
+      { uid: "GACC_202605_17", id: "17", date: "2026/05/20", port: "深圳海關", country: "印尼", product: "食用精煉椰子油", category: "8.食用油脂(大宗)", subCategory: "風味油/食用植物油", major: "化學性危害", subHazard: "加工產生物/製程污染物（Process Contaminants）", tier3: "縮水甘油酯 (GEs) 超標", detail: "縮水甘油酯 (GEs) 含量 1500μg/kg 超標", decision: "退運", importer: "深圳億油脂業有限公司", overseasFirm: "PT Palma Bio Refinery" },
+      { uid: "GACC_202606_01", id: "1", date: "2026/06/05", port: "拱北海關", country: "葡萄牙", product: "沙丁魚罐頭", category: "15.其它-市售包裝食品", subCategory: "各類水產肉類罐頭", major: "化學性危害", subHazard: "天然毒素（Natural Toxins）", tier3: "水產組胺 (Histamine) 超標", detail: "組胺 (Histamine) 檢出 260mg/kg 超標", decision: "退運或銷毀", importer: "珠海歐陸食品供應", overseasFirm: "Conservas do Atlantico Lda" },
+      { uid: "GACC_202606_14", id: "14", date: "2026/06/18", port: "重慶海關", country: "巴西", product: "冷凍雞胸肉", category: "1.雞肉&其它禽肉原料", subCategory: "1.雞肉&其它禽肉原料", major: "生物性危害", subHazard: "致病性微生物污染", tier3: "沙門氏菌檢出 (Salmonella spp.)", detail: "檢出沙門氏菌 (陽性)", decision: "退運", importer: "重慶西南肉食集團", overseasFirm: "JBS Aves S.A." },
+      { uid: "GACC_202607_02", id: "2", date: "2026/07/09", port: "上海海關", country: "紐西蘭", product: "全脂調味乳粉", category: "15.其它-市售包裝食品", subCategory: "乳製品與乳酪製品", major: "生物性危害", subHazard: "致病性微生物污染", tier3: "單核細胞增生李斯特菌檢出", detail: "檢出單核細胞增生李斯特菌", decision: "銷毀", importer: "上海紐西乳品進口", overseasFirm: "Aotearoa Dairy Farms Ltd" },
+      { uid: "GACC_202607_20", id: "20", date: "2026/07/26", port: "天津海關", country: "德國", product: "黑麥啤酒", category: "15.其它-市售包裝食品", subCategory: "酒類及酒精飲料", major: "化學性危害", subHazard: "重金屬（Heavy Metals）", tier3: "重金屬鉛 (Pb) 檢驗值超標", detail: "鉛含量 0.25mg/L 不符合標準", decision: "退運", importer: "天津歐亞精釀商行", overseasFirm: "Bavaria Brauerei GmbH" },
+      { uid: "GACC_202608_03", id: "3", date: "2026/08/10", port: "黃埔海關", country: "印度", product: "黑胡椒粒", category: "9.裹粉/調味粉(醬/液)/香辛料", subCategory: "香辛料", major: "化學性危害", subHazard: "環境污染物（Environmental Pollutants）", tier3: "芳香族/飽和烴礦物油 (MOAH/MOSH)", detail: "礦物油烴 (MOSH/MOAH) 超標", decision: "退運", importer: "廣州香辛調料行", overseasFirm: "Kerala Spices Exports Ltd" }
+    ];
+
+    let masterData = [...INITIAL_CHINA_DATASET];
+    let isUserDatasetActive = false;
+    let loadedFileNames = new Set();
+
+    const activeFilters = {
+      origin: null,
+      hazardMajor: null,
+      hazardSub: null,
+      hazardDetail: null,
+      productCat: null,
+      productSub: null,
+      productDetail: null,
+      year: null,
+      month: null,
+      searchKeyword: '',
+      matrixProduct: 'ALL'
+    };
+
+    let hazardHierarchyLevel = 1;
+    let trendHierarchyLevel = 1;
+    let productHierarchyLevel = 1;
+    let isOriginDrilldown = false;
+    let originViewMode = 'treemap';
+    let treemapBoxes = [];
+
+    let chartOriginInstance = null;
+    let chartHazardInstance = null;
+    let chartTrendInstance = null;
+    let chartProductInstance = null;
+
+    let currentPage = 1;
+    let pageSize = 10;
+
+    function getFilteredData(excludeField = null) {
+      return masterData.filter(d => {
+        if (excludeField !== 'origin' && activeFilters.origin) {
+          if (d.country !== activeFilters.origin) return false;
+        }
+
+        if (excludeField !== 'hazard') {
+          if (activeFilters.hazardMajor && d.major !== activeFilters.hazardMajor) return false;
+          if (activeFilters.hazardSub && d.subHazard !== activeFilters.hazardSub) return false;
+          if (activeFilters.hazardDetail) {
+            const matchTier3 = d.tier3 === activeFilters.hazardDetail;
+            const matchDetail = d.detail && d.detail.includes(activeFilters.hazardDetail);
+            if (!matchTier3 && !matchDetail) return false;
+          }
+        }
+
+        if (excludeField !== 'product') {
+          if (activeFilters.productCat && d.category !== activeFilters.productCat) return false;
+          if (activeFilters.productSub && d.subCategory !== activeFilters.productSub) return false;
+          if (activeFilters.productDetail && cleanDisplayProductName(d.product) !== activeFilters.productDetail) return false;
+        }
+
+        if (excludeField !== 'trend') {
+          if (activeFilters.year && !d.date.startsWith(activeFilters.year)) return false;
+          if (activeFilters.month && !d.date.startsWith(activeFilters.month)) return false;
+        }
+
+        if (activeFilters.searchKeyword) {
+          const rawKw = activeFilters.searchKeyword.toLowerCase().trim();
+          const kwTrad = toTraditionalChinese(rawKw);
+          const kwSimp = toSimplifiedChinese(rawKw);
+
+          const matchCheck = (val) => {
+            if (!val) return false;
+            const strLower = String(val).toLowerCase();
+            return strLower.includes(rawKw) || strLower.includes(kwTrad) || strLower.includes(kwSimp);
+          };
+
+          const matchKw = matchCheck(d.product) ||
+                          matchCheck(d.country) ||
+                          matchCheck(d.port) ||
+                          matchCheck(d.detail) ||
+                          matchCheck(d.tier3) ||
+                          matchCheck(d.id) ||
+                          matchCheck(d.declarationNo) ||
+                          matchCheck(d.importer);
+          if (!matchKw) return false;
+        }
+
+        return true;
+      });
+    }
+
+    function refreshKPIs() {
+      const data = getFilteredData();
+      const total = data.length;
+      document.getElementById('kpiTotalCount').textContent = total;
+      document.getElementById('dbStatTotal').textContent = `${masterData.length} 筆`;
+
+      if (total === 0) {
+        document.getElementById('kpiTopOrigin').textContent = "無符合案例";
+        document.getElementById('kpiOriginSub').textContent = "佔比：0%";
+        document.getElementById('kpiTopHazard').textContent = "無符合危害";
+        document.getElementById('kpiHazardSub').textContent = "佔比：0%";
+        document.getElementById('kpiTopProduct').textContent = "無符合品類";
+        document.getElementById('kpiProductSub').textContent = "件數：0 件";
+        return;
+      }
+
+      const originCounts = {};
+      data.forEach(d => {
+        const country = d.country || '未標示國家';
+        if (country !== '未標示國家') {
+          originCounts[country] = (originCounts[country] || 0) + 1;
+        }
+      });
+
+      const sortedOrigins = Object.entries(originCounts).sort((a,b) => b[1] - a[1]);
+      if (sortedOrigins.length > 0) {
+        const topOrigin = sortedOrigins[0];
+        const originPct = ((topOrigin[1] / total) * 100).toFixed(1);
+        document.getElementById('kpiTopOrigin').textContent = topOrigin[0];
+        document.getElementById('kpiOriginSub').textContent = `${topOrigin[1]} 件 (佔比 ${originPct}%)`;
+      } else {
+        document.getElementById('kpiTopOrigin').textContent = '未標示國家';
+        document.getElementById('kpiOriginSub').textContent = '無明確產地';
+      }
+
+      const hazardCounts = {};
+      data.forEach(d => {
+        const key = d.subHazard || d.major;
+        hazardCounts[key] = (hazardCounts[key] || 0) + 1;
+      });
+      const topHazard = Object.entries(hazardCounts).sort((a,b) => b[1] - a[1])[0];
+      const hazardPct = ((topHazard[1] / total) * 100).toFixed(1);
+      document.getElementById('kpiTopHazard').textContent = topHazard[0].split('（')[0];
+      document.getElementById('kpiHazardSub').textContent = `${topHazard[1]} 件 (佔比 ${hazardPct}%)`;
+
+      const productCounts = {};
+      data.forEach(d => {
+        const p = cleanDisplayProductName(d.product) || formatCategorySimple(d.category);
+        productCounts[p] = (productCounts[p] || 0) + 1;
+      });
+      const topProd = Object.entries(productCounts).sort((a,b) => b[1] - a[1])[0];
+      document.getElementById('kpiTopProduct').textContent = topProd[0];
+      document.getElementById('kpiProductSub').textContent = `累計 ${topProd[1]} 件 (${((topProd[1]/total)*100).toFixed(1)}%)`;
+    }
+
+    function updateFilterBanner() {
+      const banner = document.getElementById('filterBanner');
+      const tagContainer = document.getElementById('activeFilterTags');
+      tagContainer.innerHTML = '';
+      let hasFilter = false;
+
+      const addTag = (text, onRemove) => {
+        hasFilter = true;
+        const tag = document.createElement('span');
+        tag.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-cyan-900/60 border border-cyan-500/50 text-cyan-200 text-xs font-mono';
+        tag.innerHTML = `<span>${text}</span><button class="hover:text-white ml-1 text-cyan-400 font-bold">&times;</button>`;
+        tag.querySelector('button').onclick = onRemove;
+        tagContainer.appendChild(tag);
+      };
+
+      if (activeFilters.origin) {
+        addTag(`產地/出口國: ${activeFilters.origin}`, () => { activeFilters.origin = null; refreshAll(); });
+      }
+      if (activeFilters.hazardMajor) {
+        addTag(`危害大類: ${activeFilters.hazardMajor}`, () => {
+          activeFilters.hazardMajor = null;
+          activeFilters.hazardSub = null;
+          activeFilters.hazardDetail = null;
+          hazardHierarchyLevel = 1;
+          refreshAll();
+        });
+      }
+      if (activeFilters.hazardSub) {
+        addTag(`危害中類: ${activeFilters.hazardSub}`, () => {
+          activeFilters.hazardSub = null;
+          activeFilters.hazardDetail = null;
+          hazardHierarchyLevel = 2;
+          refreshAll();
+        });
+      }
+      if (activeFilters.hazardDetail) {
+        addTag(`具體細項: ${activeFilters.hazardDetail}`, () => {
+          activeFilters.hazardDetail = null;
+          refreshAll();
+        });
+      }
+      if (activeFilters.productCat) {
+        addTag(`品類: ${formatCategorySimple(activeFilters.productCat)}`, () => {
+          activeFilters.productCat = null;
+          activeFilters.productSub = null;
+          activeFilters.productDetail = null;
+          productHierarchyLevel = 1;
+          refreshAll();
+        });
+      }
+      if (activeFilters.productSub) {
+        addTag(`次分類: ${activeFilters.productSub}`, () => {
+          activeFilters.productSub = null;
+          activeFilters.productDetail = null;
+          productHierarchyLevel = 2;
+          refreshAll();
+        });
+      }
+      if (activeFilters.productDetail) {
+        addTag(`品名細項: ${activeFilters.productDetail}`, () => {
+          activeFilters.productDetail = null;
+          refreshAll();
+        });
+      }
+      if (activeFilters.year) {
+        addTag(`年份: ${activeFilters.year}`, () => {
+          activeFilters.year = null;
+          activeFilters.month = null;
+          trendHierarchyLevel = 1;
+          refreshAll();
+        });
+      }
+      if (activeFilters.month) {
+        addTag(`月份: ${activeFilters.month}`, () => {
+          activeFilters.month = null;
+          refreshAll();
+        });
+      }
+      if (activeFilters.searchKeyword) {
+        addTag(`關鍵字: ${activeFilters.searchKeyword}`, () => {
+          activeFilters.searchKeyword = '';
+          document.getElementById('tableSearchInput').value = '';
+          refreshAll();
+        });
+      }
+
+      if (hasFilter) {
+        banner.classList.remove('hidden');
+        banner.classList.add('flex');
+      } else {
+        banner.classList.add('hidden');
+        banner.classList.remove('flex');
+      }
+    }
+
+    function toggleOriginViewMode() {
+      originViewMode = (originViewMode === 'treemap') ? 'donut' : 'treemap';
+      renderOriginChart();
+    }
+
+    function returnTopOrigins() {
+      isOriginDrilldown = false;
+      renderOriginChart();
+    }
+
+    let treemapEventsBound = false;
+    function initTreemapEvents(canvas) {
+      if (treemapEventsBound) return;
+      treemapEventsBound = true;
+      const tooltip = document.getElementById('treemapTooltip');
+      const ttTitle = document.getElementById('ttTitle');
+      const ttDetail = document.getElementById('ttDetail');
+
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const hit = treemapBoxes.find(b => mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h);
+        if (hit) {
+          tooltip.classList.remove('hidden');
+          tooltip.style.left = `${Math.min(mx + 12, rect.width - 140)}px`;
+          tooltip.style.top = `${Math.min(my + 12, rect.height - 60)}px`;
+          ttTitle.textContent = hit.name;
+          ttDetail.textContent = `${hit.count} 件 (${hit.pct}%)`;
+        } else {
+          tooltip.classList.add('hidden');
+        }
+      });
+
+      canvas.addEventListener('mouseleave', () => {
+        tooltip.classList.add('hidden');
+      });
+
+      canvas.addEventListener('click', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const hit = treemapBoxes.find(b => mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h);
+        if (hit) {
+          if (hit.isOther) {
+            isOriginDrilldown = true;
+            renderOriginChart();
+          } else {
+            activeFilters.origin = (activeFilters.origin === hit.name) ? null : hit.name;
+            refreshAll();
+          }
+        }
+      });
+    }
+
+    function drawTreemap(canvas, items, totalCount) {
+      initTreemapEvents(canvas);
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const width = rect.width || 500;
+      const height = rect.height || 290;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, width, height);
+
+      treemapBoxes = [];
+      if (!items || items.length === 0) {
+        ctx.fillStyle = '#64748b';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('無相符產地資料', width / 2, height / 2);
+        return;
+      }
+
+      const colors = [
+        '#0284c7', '#0d9488', '#059669', '#d97706', '#dc2626',
+        '#7c3aed', '#db2777', '#2563eb', '#16a34a', '#ca8a04',
+        '#e11d48', '#9333ea', '#4f46e5', '#0891b2', '#65a30d',
+        '#c026d3', '#ea580c', '#334155', '#0f766e', '#854d0e'
+      ];
+
+      function partition(itemList, x, y, w, h) {
+        if (itemList.length === 0) return;
+        if (itemList.length === 1) {
+          treemapBoxes.push({
+            x, y, w, h,
+            name: itemList[0].name,
+            count: itemList[0].count,
+            pct: ((itemList[0].count / totalCount) * 100).toFixed(1),
+            isOther: itemList[0].isOther,
+            color: itemList[0].isOther ? '#334155' : colors[treemapBoxes.length % colors.length]
+          });
+          return;
+        }
+
+        const sum = itemList.reduce((acc, it) => acc + it.count, 0) || 1;
+        let half = 0;
+        let splitIdx = 0;
+        for (let i = 0; i < itemList.length; i++) {
+          half += itemList[i].count;
+          if (half >= sum / 2 || i === itemList.length - 2) {
+            splitIdx = i + 1;
+            break;
+          }
+        }
+        if (splitIdx === 0) splitIdx = 1;
+
+        const leftList = itemList.slice(0, splitIdx);
+        const rightList = itemList.slice(splitIdx);
+        const leftRatio = (itemList.slice(0, splitIdx).reduce((a, b) => a + b.count, 0)) / sum;
+
+        if (w >= h) {
+          const w1 = w * leftRatio;
+          partition(leftList, x, y, w1, h);
+          partition(rightList, x + w1, y, w - w1, h);
+        } else {
+          const h1 = h * leftRatio;
+          partition(leftList, x, y, w, h1);
+          partition(rightList, x, y + h1, w, h - h1);
+        }
+      }
+
+      partition(items, 2, 2, width - 4, height - 4);
+
+      treemapBoxes.forEach(b => {
+        const isSelected = activeFilters.origin === b.name;
+        ctx.fillStyle = isSelected ? '#38bdf8' : b.color;
+        ctx.fillRect(b.x + 1, b.y + 1, Math.max(b.w - 2, 1), Math.max(b.h - 2, 1));
+
+        ctx.strokeStyle = isSelected ? '#ffffff' : '#070b13';
+        ctx.lineWidth = isSelected ? 2 : 1;
+        ctx.strokeRect(b.x + 1, b.y + 1, Math.max(b.w - 2, 1), Math.max(b.h - 2, 1));
+
+        if (b.w > 28 && b.h > 24) {
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          let displayName = b.name;
+          if (ctx.measureText(displayName).width > b.w - 6) {
+            displayName = displayName.slice(0, Math.max(2, Math.floor((b.w - 8) / 12))) + '..';
+          }
+          ctx.fillText(displayName, b.x + b.w / 2, b.y + b.h / 2 - (b.h > 38 ? 7 : 0));
+
+          if (b.h > 38) {
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = '10px monospace';
+            ctx.fillText(`${b.count}件`, b.x + b.w / 2, b.y + b.h / 2 + 8);
+          }
+        }
+      });
+    }
+
+    function renderOriginChart() {
+      const data = getFilteredData('origin');
+      const counts = {};
+      data.forEach(d => {
+        const c = d.country || '未標示國家';
+        counts[c] = (counts[c] || 0) + 1;
+      });
+
+      const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+      const total = data.length || 1;
+
+      const treemapCanvas = document.getElementById('originTreemapCanvas');
+      const donutCanvas = document.getElementById('originDonutCanvas');
+      const label = document.getElementById('originChartTypeLabel');
+      const statusLabel = document.getElementById('originStatusLabel');
+      const btnReturn = document.getElementById('btnReturnTopOrigin');
+
+      if (originViewMode === 'donut') {
+        treemapCanvas.classList.add('hidden');
+        donutCanvas.classList.remove('hidden');
+        label.textContent = "切換為矩形樹狀圖";
+        btnReturn.classList.add('hidden');
+        statusLabel.textContent = "圓餅圖分佈檢視 (點選切片可反向過濾)";
+
+        const top10 = sorted.slice(0, 10);
+        const otherCount = sorted.slice(10).reduce((acc, cur) => acc + cur[1], 0);
+        if (otherCount > 0) top10.push(['其他國家', otherCount]);
+
+        if (chartOriginInstance) chartOriginInstance.destroy();
+        const ctx = donutCanvas.getContext('2d');
+        chartOriginInstance = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: top10.map(s => s[0]),
+            datasets: [{
+              data: top10.map(s => s[1]),
+              backgroundColor: [
+                '#06b6d4', '#3b82f6', '#10b981', '#f59e0b', '#ec4899',
+                '#8b5cf6', '#14b8a6', '#f97316', '#6366f1', '#84cc16', '#64748b'
+              ],
+              borderColor: '#0f172a',
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'right',
+                labels: { color: '#cbd5e1', font: { size: 10 }, boxWidth: 12 }
+              }
+            },
+            onClick: (evt, elements) => {
+              if (elements.length > 0) {
+                const idx = elements[0].index;
+                const selected = top10[idx][0];
+                if (selected !== '其他國家') {
+                  activeFilters.origin = (activeFilters.origin === selected) ? null : selected;
+                  setTimeout(() => refreshAll(), 0);
+                }
+              }
+            }
+          }
+        });
+        return;
+      }
+
+      treemapCanvas.classList.remove('hidden');
+      donutCanvas.classList.add('hidden');
+      if (chartOriginInstance) { chartOriginInstance.destroy(); chartOriginInstance = null; }
+      label.textContent = "切換為圓餅圖";
+
+      let displayItems = [];
+      if (!isOriginDrilldown) {
+        btnReturn.classList.add('hidden');
+        statusLabel.textContent = "第 1 層：Top 20 出口國 + 長尾其他 (點擊「其他」下鑽)";
+        if (sorted.length <= 20) {
+          displayItems = sorted.map(s => ({ name: s[0], count: s[1] }));
+        } else {
+          displayItems = sorted.slice(0, 19).map(s => ({ name: s[0], count: s[1] }));
+          const otherCount = sorted.slice(19).reduce((acc, cur) => acc + cur[1], 0);
+          displayItems.push({ name: '其他來源 (長尾)', count: otherCount, isOther: true });
+        }
+      } else {
+        btnReturn.classList.remove('hidden');
+        statusLabel.textContent = "第 2 層：長尾出口國清單 (點擊國家篩選)";
+        displayItems = sorted.slice(19).map(s => ({ name: s[0], count: s[1] }));
+      }
+
+      drawTreemap(treemapCanvas, displayItems, total);
+    }
+
+    function renderHazardChart() {
+      const data = getFilteredData('hazard');
+      const counts = {};
+
+      const majorColorMap = {
+        '化學性危害': '#f59e0b',
+        '生物性危害': '#10b981',
+        '物理性危害與包裝': '#ec4899',
+        '不符合國家標準 (品質指標)': '#8b5cf6',
+        '標示與法規程序': '#06b6d4'
+      };
+
+      const badge = document.getElementById('hazardLevelBadge');
+      const hint = document.getElementById('hazardFooterHint');
+      const btnBack = document.getElementById('btnReturnHazard');
+      const indicator = document.getElementById('hazardLevelIndicator');
+
+      let currentColor = '#f59e0b';
+
+      if (hazardHierarchyLevel === 1) {
+        badge.textContent = "Tier 1: 5大危害大類";
+        hint.textContent = "點擊長條柱依序下鑽：大類 ➔ 標準中類 ➔ 具體物質細項";
+        indicator.textContent = "1/3 階 (大類)";
+        btnBack.classList.add('hidden');
+
+        const standardMajors = ['化學性危害', '生物性危害', '不符合國家標準 (品質指標)', '標示與法規程序', '物理性危害與包裝'];
+        standardMajors.forEach(m => counts[m] = 0);
+        data.forEach(d => {
+          const m = d.major || '標示與法規程序';
+          counts[m] = (counts[m] || 0) + 1;
+        });
+      } else if (hazardHierarchyLevel === 2) {
+        badge.textContent = `Tier 2: 【${activeFilters.hazardMajor}】中類分類`;
+        hint.textContent = "點擊中類長條柱下鑽具體物質或法規細項";
+        indicator.textContent = "2/3 階 (中類)";
+        btnBack.classList.remove('hidden');
+        currentColor = majorColorMap[activeFilters.hazardMajor] || '#f59e0b';
+
+        data.filter(d => d.major === activeFilters.hazardMajor).forEach(d => {
+          const sub = d.subHazard || '未分類中類';
+          counts[sub] = (counts[sub] || 0) + 1;
+        });
+      } else {
+        badge.textContent = `Tier 3: 【${activeFilters.hazardSub || activeFilters.hazardMajor}】細項物質`;
+        hint.textContent = "點擊具體物質長條柱可直接鎖定全域篩選";
+        indicator.textContent = "3/3 階 (物質)";
+        btnBack.classList.remove('hidden');
+        currentColor = majorColorMap[activeFilters.hazardMajor] || '#f59e0b';
+
+        data.filter(d => {
+          if (activeFilters.hazardSub) return d.subHazard === activeFilters.hazardSub;
+          if (activeFilters.hazardMajor) return d.major === activeFilters.hazardMajor;
+          return true;
+        }).forEach(d => {
+          const det = d.tier3 || d.detail || '未分類細項';
+          counts[det] = (counts[det] || 0) + 1;
+        });
+      }
+
+      const sorted = Object.entries(counts).filter(it => it[1] > 0 || hazardHierarchyLevel === 1).sort((a,b) => b[1] - a[1]);
+      const labels = sorted.map(s => s[0]);
+      const values = sorted.map(s => s[1]);
+
+      const barBgColors = hazardHierarchyLevel === 1 
+        ? labels.map(lbl => majorColorMap[lbl] || '#f59e0b')
+        : currentColor;
+
+      if (chartHazardInstance) chartHazardInstance.destroy();
+      const ctx = document.getElementById('chartHazardCanvas').getContext('2d');
+      chartHazardInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: barBgColors,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { grid: { color: 'rgba(51, 65, 85, 0.4)' }, ticks: { color: '#94a3b8' } },
+            y: {
+              grid: { display: false },
+              ticks: {
+                color: '#cbd5e1',
+                font: { size: 11 },
+                callback: function(val, index) {
+                  const lbl = this.getLabelForValue(val) || '';
+                  return lbl.length > 22 ? lbl.slice(0, 21) + '…' : lbl;
+                }
+              }
+            }
+          },
+          onClick: (evt, elements) => {
+            if (elements.length > 0) {
+              const idx = elements[0].index;
+              const selected = labels[idx];
+
+              if (hazardHierarchyLevel === 1) {
+                activeFilters.hazardMajor = selected;
+                activeFilters.hazardSub = null;
+                activeFilters.hazardDetail = null;
+                hazardHierarchyLevel = 2;
+              } else if (hazardHierarchyLevel === 2) {
+                activeFilters.hazardSub = selected;
+                activeFilters.hazardDetail = null;
+                hazardHierarchyLevel = 3;
+              } else {
+                activeFilters.hazardDetail = (activeFilters.hazardDetail === selected) ? null : selected;
+              }
+              setTimeout(() => refreshAll(), 0);
+            }
+          }
+        }
+      });
+    }
+
+    function stepUpHazardLevel() {
+      if (hazardHierarchyLevel === 3) {
+        hazardHierarchyLevel = 2;
+        activeFilters.hazardDetail = null;
+      } else if (hazardHierarchyLevel === 2) {
+        hazardHierarchyLevel = 1;
+        activeFilters.hazardSub = null;
+        activeFilters.hazardMajor = null;
+        activeFilters.hazardDetail = null;
+      }
+      refreshAll();
+    }
+
+    function renderTrendChart() {
+      const data = getFilteredData('trend');
+      const counts = {};
+
+      if (trendHierarchyLevel === 1) {
+        document.getElementById('trendLevelBadge').textContent = "年度總覽 (Yearly)";
+        document.getElementById('btnReturnTrend').classList.add('hidden');
+        document.getElementById('trendFooterHint').textContent = "點擊年份長條柱下鑽 1~12 月每月走勢";
+        document.getElementById('trendViewIndicator').textContent = "年度累積";
+
+        data.forEach(d => {
+          const yr = d.date.split('/')[0] || '2026';
+          counts[yr] = (counts[yr] || 0) + 1;
+        });
+      } else {
+        document.getElementById('trendLevelBadge').textContent = `${activeFilters.year} 年月度走勢`;
+        document.getElementById('btnReturnTrend').classList.remove('hidden');
+        document.getElementById('trendFooterHint').textContent = "點擊月份長條柱鎖定當月數據；再點擊取消";
+        document.getElementById('trendViewIndicator').textContent = "月份分佈";
+
+        for (let m = 1; m <= 12; m++) {
+          const mStr = `${activeFilters.year}/${String(m).padStart(2, '0')}`;
+          counts[mStr] = 0;
+        }
+
+        data.filter(d => d.date.startsWith(activeFilters.year)).forEach(d => {
+          const ym = d.date.slice(0, 7);
+          counts[ym] = (counts[ym] || 0) + 1;
+        });
+      }
+
+      const labels = Object.keys(counts).sort();
+      const values = labels.map(k => counts[k]);
+
+      if (chartTrendInstance) chartTrendInstance.destroy();
+      const ctx = document.getElementById('chartTrendCanvas').getContext('2d');
+      chartTrendInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: '#06b6d4',
+            hoverBackgroundColor: '#38bdf8',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { grid: { color: 'rgba(51, 65, 85, 0.4)' }, ticks: { color: '#94a3b8' } },
+            x: { grid: { display: false }, ticks: { color: '#cbd5e1' } }
+          },
+          onClick: (evt, elements) => {
+            if (elements.length > 0) {
+              const idx = elements[0].index;
+              const selected = labels[idx];
+
+              if (trendHierarchyLevel === 1) {
+                activeFilters.year = selected;
+                trendHierarchyLevel = 2;
+              } else {
+                activeFilters.month = (activeFilters.month === selected) ? null : selected;
+              }
+              setTimeout(() => refreshAll(), 0);
+            }
+          }
+        }
+      });
+    }
+
+    function stepUpTrendLevel() {
+      trendHierarchyLevel = 1;
+      activeFilters.year = null;
+      activeFilters.month = null;
+      refreshAll();
+    }
+
+    function renderProductChart() {
+      const data = getFilteredData('product');
+      const counts = {};
+
+      const badge = document.getElementById('productLevelBadge');
+      const btnBack = document.getElementById('btnReturnProduct');
+      const hint = document.getElementById('productFooterHint');
+      const indicator = document.getElementById('productViewIndicator');
+
+      let currentColor = '#10b981';
+
+      if (productHierarchyLevel === 1) {
+        badge.textContent = "Tier 1: 16大標準品類";
+        btnBack.classList.add('hidden');
+        hint.textContent = "點擊品類下鑽次分類；生鮮原肉（雞/豬/牛/羊/魚）單獨一類無須次分";
+        indicator.textContent = "1/3 階 (品類)";
+
+        data.forEach(d => {
+          const simpleName = formatCategorySimple(d.category);
+          counts[simpleName] = (counts[simpleName] || 0) + 1;
+        });
+      } else if (productHierarchyLevel === 2) {
+        badge.textContent = `Tier 2: 【${formatCategorySimple(activeFilters.productCat)}】次分類`;
+        btnBack.classList.remove('hidden');
+        hint.textContent = "點擊次分類長條柱下鑽至具體申報品名 Top 10";
+        indicator.textContent = "2/3 階 (次分類)";
+        currentColor = '#06b6d4';
+
+        data.filter(d => d.category === activeFilters.productCat).forEach(d => {
+          const sub = d.subCategory || '其餘加工品';
+          counts[sub] = (counts[sub] || 0) + 1;
+        });
+      } else {
+        badge.textContent = `Tier 3: 【${activeFilters.productSub || formatCategorySimple(activeFilters.productCat)}】品名細項 Top 10`;
+        btnBack.classList.remove('hidden');
+        hint.textContent = "點擊具體品名細項長條柱直接鎖定全域篩選";
+        indicator.textContent = "3/3 階 (具體品名)";
+        currentColor = '#f59e0b';
+
+        data.filter(d => {
+          if (activeFilters.productSub) return d.subCategory === activeFilters.productSub;
+          if (activeFilters.productCat) return d.category === activeFilters.productCat;
+          return true;
+        }).forEach(d => {
+          const cleanP = cleanDisplayProductName(d.product) || formatCategorySimple(d.category);
+          counts[cleanP] = (counts[cleanP] || 0) + 1;
+        });
+      }
+
+      let sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+      if (productHierarchyLevel === 3) sorted = sorted.slice(0, 10);
+
+      const labels = sorted.map(s => s[0]);
+      const values = sorted.map(s => s[1]);
+
+      if (chartProductInstance) chartProductInstance.destroy();
+      const ctx = document.getElementById('chartProductCanvas').getContext('2d');
+      chartProductInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: currentColor,
+            hoverBackgroundColor: '#34d399',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { grid: { color: 'rgba(51, 65, 85, 0.4)' }, ticks: { color: '#94a3b8' } },
+            x: {
+              grid: { display: false },
+              ticks: {
+                color: '#cbd5e1',
+                callback: function(val, index) {
+                  const lbl = this.getLabelForValue(val) || '';
+                  return lbl.length > 8 ? lbl.slice(0,7) + '..' : lbl;
+                }
+              }
+            }
+          },
+          onClick: (evt, elements) => {
+            if (elements.length > 0) {
+              const idx = elements[0].index;
+              const selected = labels[idx];
+
+              if (productHierarchyLevel === 1) {
+                const targetFullCat = PRODUCT_CATEGORIES_16.find(c => formatCategorySimple(c) === selected) || selected;
+                if (RAW_MEAT_CATEGORIES.some(rm => formatCategorySimple(rm) === selected)) {
+                  activeFilters.productCat = (activeFilters.productCat === targetFullCat) ? null : targetFullCat;
+                } else {
+                  activeFilters.productCat = targetFullCat;
+                  productHierarchyLevel = 2;
+                }
+              } else if (productHierarchyLevel === 2) {
+                activeFilters.productSub = selected;
+                productHierarchyLevel = 3;
+              } else {
+                activeFilters.productDetail = (activeFilters.productDetail === selected) ? null : selected;
+              }
+              setTimeout(() => refreshAll(), 0);
+            }
+          }
+        }
+      });
+    }
+
+    function stepUpProductLevel() {
+      if (productHierarchyLevel === 3) {
+        productHierarchyLevel = 2;
+        activeFilters.productDetail = null;
+      } else if (productHierarchyLevel === 2) {
+        productHierarchyLevel = 1;
+        activeFilters.productSub = null;
+        activeFilters.productCat = null;
+        activeFilters.productDetail = null;
+      }
+      refreshAll();
+    }
+
+    function renderTimelineMatrix() {
+      const grid = document.getElementById('timelineMatrixGrid');
+      const select = document.getElementById('matrixProductSelect');
+      grid.innerHTML = '';
+
+      if (select.options.length <= 1) {
+        PRODUCT_CATEGORIES_16.forEach(cat => {
+          const opt = document.createElement('option');
+          opt.value = cat;
+          opt.textContent = formatCategorySimple(cat);
+          select.appendChild(opt);
+        });
+      }
+
+      let matrixScopeData = [...masterData];
+      if (activeFilters.matrixProduct !== 'ALL') {
+        matrixScopeData = matrixScopeData.filter(d => d.category === activeFilters.matrixProduct);
+      }
+
+      const months = [
+        '2026/01', '2026/02', '2026/03', '2026/04',
+        '2026/05', '2026/06', '2026/07', '2026/08',
+        '2026/09', '2026/10', '2026/11', '2026/12'
+      ];
+
+      months.forEach(ym => {
+        const matches = matrixScopeData.filter(d => d.date.startsWith(ym));
+        const count = matches.length;
+
+        let bgClass = 'bg-[#0b101c] border border-slate-800 text-slate-500';
+        let badgeColor = 'text-slate-500';
+        if (count >= 3) {
+          bgClass = 'bg-rose-950/60 border border-rose-500/80 text-rose-200 shadow-md shadow-rose-900/20';
+          badgeColor = 'text-rose-400 font-bold';
+        } else if (count >= 1) {
+          bgClass = 'bg-amber-950/50 border border-amber-500/60 text-amber-200';
+          badgeColor = 'text-amber-400 font-bold';
+        }
+
+        const isActiveMonth = activeFilters.month === ym;
+        const glowClass = isActiveMonth ? 'ring-2 ring-cyan-400 scale-105' : '';
+
+        const card = document.createElement('div');
+        card.className = `flex-1 min-w-[85px] p-2.5 rounded-xl flex flex-col items-center justify-center cursor-pointer transition hover:border-cyan-400 ${bgClass} ${glowClass}`;
+        card.onclick = () => {
+          activeFilters.month = (activeFilters.month === ym) ? null : ym;
+          refreshAll();
+        };
+
+        card.innerHTML = `
+          <span class="text-[10px] font-mono tracking-tight text-slate-400">${ym.slice(5)}月</span>
+          <span class="text-base font-black font-mono my-0.5 ${badgeColor}">${count}</span>
+          <span class="text-[9px] truncate max-w-[75px]">${count > 0 ? '警戒' : '正常'}</span>
+        `;
+
+        grid.appendChild(card);
+      });
+    }
+
+    function onMatrixProductChange(val) {
+      activeFilters.matrixProduct = val;
+      renderTimelineMatrix();
+    }
+
+    function renderTable() {
+      const data = getFilteredData();
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+
+      const total = data.length;
+      const totalPages = Math.ceil(total / pageSize) || 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const startIndex = (currentPage - 1) * pageSize;
+      const pageData = data.slice(startIndex, startIndex + pageSize);
+
+      document.getElementById('tableInfoText').textContent =
+        total > 0 ? `顯示第 ${startIndex + 1} 至 ${Math.min(startIndex + pageSize, total)} 筆，共 ${total} 筆` : `無相符紀錄`;
+      document.getElementById('pageIndicator').textContent = `${currentPage} / ${totalPages}`;
+      document.getElementById('btnPrevPage').disabled = currentPage <= 1;
+      document.getElementById('btnNextPage').disabled = currentPage >= totalPages;
+
+      if (pageData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500 font-mono">未查獲符合目前篩選條件的邊境查驗紀錄</td></tr>`;
+        return;
+      }
+
+      pageData.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition cursor-pointer";
+        tr.onclick = (e) => {
+          if (!e.target.closest('button')) openCaseModal(item.uid);
+        };
+
+        const displayCat = formatCategorySimple(item.category);
+        const cleanProd = cleanDisplayProductName(item.product);
+
+        tr.innerHTML = `
+          <td class="px-3.5 py-3 font-mono text-cyan-400 whitespace-nowrap">${item.date}</td>
+          <td class="px-3.5 py-3">
+            <div class="font-bold text-white">${item.id}</div>
+            <div class="text-[11px] text-slate-400 font-mono">${item.port}</div>
+          </td>
+          <td class="px-3.5 py-3">
+            <span class="inline-flex items-center gap-1 font-semibold text-slate-200">
+              <i class="fa-solid fa-location-dot text-rose-400 text-xs"></i> ${item.country}
+            </span>
+            <div class="text-[11px] text-slate-500 truncate max-w-[150px]">${item.importer || ''}</div>
+          </td>
+          <td class="px-3.5 py-3">
+            <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 font-sans shadow-sm">
+              ${displayCat}
+            </span>
+            ${cleanProd && cleanProd !== displayCat ? `
+              <div class="text-[11px] text-slate-300 mt-1 font-medium truncate max-w-[220px]" title="${cleanProd}">
+                ${cleanProd}
+              </div>` : ''}
+          </td>
+          <td class="px-3.5 py-3 max-w-xs">
+            <div class="text-amber-400 font-medium truncate">${item.detail}</div>
+            <div class="text-[10px] text-slate-500">${item.major} ➔ ${item.subHazard}</div>
+          </td>
+          <td class="px-3.5 py-3 whitespace-nowrap">
+            <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-950 text-rose-300 border border-rose-600/40">
+              ${item.decision}
+            </span>
+          </td>
+          <td class="px-3.5 py-3 text-center">
+            <button onclick="openCaseModal('${item.uid}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 rounded text-xs">
+              <i class="fa-solid fa-folder-open"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function prevTablePage() {
+      if (currentPage > 1) {
+        currentPage--;
+        renderTable();
+      }
+    }
+
+    function nextTablePage() {
+      const totalPages = Math.ceil(getFilteredData().length / pageSize) || 1;
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderTable();
+      }
+    }
+
+    function changePageSize(val) {
+      pageSize = parseInt(val, 10);
+      currentPage = 1;
+      renderTable();
+    }
+
+    function handleTableSearch() {
+      activeFilters.searchKeyword = document.getElementById('tableSearchInput').value.trim();
+      currentPage = 1;
+      refreshAll();
+    }
+
+    function openCaseModal(caseUid) {
+      const item = masterData.find(d => d.uid === caseUid);
+      if (!item) return;
+
+      const displayCat = formatCategorySimple(item.category);
+      const cleanProd = cleanDisplayProductName(item.product);
+
+      document.getElementById('modalCaseId').textContent = `官方案卷卷宗 #${item.id}`;
+      document.getElementById('modalCaseDate').textContent = `查驗發布日期：${item.date}`;
+      document.getElementById('modalProductName').textContent = cleanProd || displayCat;
+      document.getElementById('modalCategoryBadge').textContent = displayCat;
+      document.getElementById('modalOrigin').textContent = `${item.country} (${item.port})`;
+      document.getElementById('modalImporter').textContent = `申報或進口業者：${item.importer || '未提供'}`;
+      document.getElementById('modalReason').textContent = item.detail;
+      document.getElementById('modalHazardMajor').textContent = item.major;
+      document.getElementById('modalHazardSub').textContent = item.subHazard;
+      document.getElementById('modalDecision').textContent = item.decision;
+
+      document.getElementById('caseModal').classList.remove('hidden');
+    }
+
+    function closeCaseModal() {
+      document.getElementById('caseModal').classList.add('hidden');
+    }
+
+    function openHandbookModal() {
+      document.getElementById('handbookModal').classList.remove('hidden');
+    }
+
+    function closeHandbookModal() {
+      document.getElementById('handbookModal').classList.add('hidden');
+    }
+
+    function refreshAll() {
+      refreshKPIs();
+      updateFilterBanner();
+      renderOriginChart();
+      renderHazardChart();
+      renderTrendChart();
+      renderProductChart();
+      renderTimelineMatrix();
+      renderTable();
+    }
+
+    function resetAllFilters() {
+      activeFilters.origin = null;
+      activeFilters.hazardMajor = null;
+      activeFilters.hazardSub = null;
+      activeFilters.hazardDetail = null;
+      activeFilters.productCat = null;
+      activeFilters.productSub = null;
+      activeFilters.productDetail = null;
+      activeFilters.year = null;
+      activeFilters.month = null;
+      activeFilters.searchKeyword = '';
+      document.getElementById('tableSearchInput').value = '';
+
+      hazardHierarchyLevel = 1;
+      trendHierarchyLevel = 1;
+      productHierarchyLevel = 1;
+      isOriginDrilldown = false;
+      currentPage = 1;
+
+      refreshAll();
+    }
+
+    function filterByTopOrigin() {
+      const top = document.getElementById('kpiTopOrigin').textContent;
+      if (top && top !== '--' && top !== '無符合案例') {
+        activeFilters.origin = (activeFilters.origin === top) ? null : top;
+        refreshAll();
+      }
+    }
+
+    function filterByTopHazard() {
+      const top = document.getElementById('kpiTopHazard').textContent;
+      if (top && top !== '--' && top !== '無符合危害') {
+        activeFilters.hazardSub = (activeFilters.hazardSub === top) ? null : top;
+        refreshAll();
+      }
+    }
+
+    function filterByTopProduct() {
+      const top = document.getElementById('kpiTopProduct').textContent;
+      if (top && top !== '--' && top !== '無符合品類') {
+        activeFilters.searchKeyword = top;
+        document.getElementById('tableSearchInput').value = top;
+        refreshAll();
+      }
+    }
+
+    function exportFilteredData() {
+      const data = getFilteredData();
+      if (data.length === 0) return;
+
+      const headers = ["通報日期", "官方案號", "查驗口岸", "原產地/國別", "產品名稱", "16大標準品類", "次分類", "危害大類", "危害中類", "具體違規事由", "處置結果", "進口商/申報者", "境外生產企業"];
+      const rows = data.map(d => [
+        `"${d.date}"`,
+        `"${d.id}"`,
+        `"${d.port}"`,
+        `"${d.country}"`,
+        `"${d.product}"`,
+        `"${d.category}"`,
+        `"${d.subCategory || ''}"`,
+        `"${d.major}"`,
+        `"${d.subHazard}"`,
+        `"${(d.detail || '').replace(/"/g, '""')}"`,
+        `"${d.decision}"`,
+        `"${(d.importer || '').replace(/"/g, '""')}"`,
+        `"${(d.overseasFirm || '').replace(/"/g, '""')}"`
+      ]);
+
+      const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `China_Customs_GACC_Border_FoodSafety_${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function autoCategorizeProduct(productName) {
+      if (!productName) return { category: '15.其它-市售包裝食品', subCategory: '其餘加工品' };
+      const name = cleanDisplayProductName(productName).toLowerCase() || productName.toLowerCase();
+
+      if (/雞|鸡|鸭|鵝|鹅|鸽|禽|chicken|poultry/i.test(name) && !/麵|面|粉|餅|饼|醬|酱|湯|汤|萃/i.test(name)) {
+        return { category: '1.雞肉&其它禽肉原料', subCategory: '1.雞肉&其它禽肉原料' };
+      }
+      if (/豬|猪|pork|喉头|心管|猪气管|豬氣管/i.test(name) && !/麵|面|粉|餅|饼|醬|酱|罐/i.test(name)) {
+        return { category: '2.豬肉原料', subCategory: '2.豬肉原料' };
+      }
+      if (/牛|beef/i.test(name) && !/奶|乳|麵|面|餅|饼|乾|干/i.test(name)) {
+        return { category: '3.牛肉原料', subCategory: '3.牛肉原料' };
+      }
+      if (/羊|mutton|lamb/i.test(name)) {
+        return { category: '4.羊肉原料', subCategory: '4.羊肉原料' };
+      }
+      if (/魚|鱼|巴沙|鱈|鳕|鲑|鮭|鯡|鲱|鮐|鲐|鲈|鱸|叫姑|黄姑|黃姑|白姑|舌鳎|舌鰨|fish/i.test(name)) {
+        return { category: '5.魚類原料', subCategory: '5.魚類原料' };
+      }
+
+      if (/蝦|虾|蟹|龙虾|龍蝦/i.test(name)) {
+        return { category: '6.海鮮原料', subCategory: '生鮮甲殼類 (白蝦/青蟹/龍蝦)' };
+      }
+      if (/海参|海參|沙虫|沙蟲|魷魚|鱿鱼|墨魚|八爪/i.test(name)) {
+        return { category: '6.海鮮原料', subCategory: '軟體與棘皮類 (海參/沙蟲/魷魚)' };
+      }
+      if (/貝|贝|扇贝|扇貝|蛤/i.test(name)) {
+        return { category: '6.海鮮原料', subCategory: '貝類水產' };
+      }
+
+      if (/添加劑|添加物|添加剂|膠|胶|色素|防腐|乳化|檸檬酸|柠檬酸/i.test(name)) {
+        return { category: '7.食品添加物', subCategory: '單方/複方添加物' };
+      }
+      if (/油|脂|棕櫚油|棕榈油|大豆油|菜籽油|椰子油|葵花/i.test(name)) {
+        return { category: '8.食用油脂(大宗)', subCategory: '風味油/食用植物油' };
+      }
+
+      if (/醬|酱|番茄醬|辣椒醬|咖喱/i.test(name)) {
+        return { category: '9.裹粉/調味粉(醬/液)/香辛料', subCategory: '調味醬料' };
+      }
+      if (/香辛|胡椒|肉桂|辣椒粉|孜然|八角/i.test(name)) {
+        return { category: '9.裹粉/調味粉(醬/液)/香辛料', subCategory: '香辛料' };
+      }
+      if (/裹粉|炸粉|地瓜粉|太白粉/i.test(name)) {
+        return { category: '9.裹粉/調味粉(醬/液)/香辛料', subCategory: '裹粉油炸粉' };
+      }
+
+      if (/白米|大米|糙米|糯米|碎米/i.test(name)) {
+        return { category: '12.農產-白米', subCategory: '生鮮食用米' };
+      }
+      if (/果|櫻桃|樱桃|榴槤|榴莲|柑|橘|草莓|蘋果|苹果|橙|桃/i.test(name)) {
+        return { category: '13.農產-蔬果', subCategory: '生鮮水果' };
+      }
+      if (/菜|蔥|葱|薑|姜|蒜|番茄/i.test(name)) {
+        return { category: '13.農產-蔬果', subCategory: '生鮮蔬菜' };
+      }
+      if (/菇|蘑菇|香菇|松茸/i.test(name)) {
+        return { category: '13.農產-蔬果', subCategory: '食用菇類' };
+      }
+
+      if (/酒|威士忌|啤酒|清酒|葡萄酒|伏特加/i.test(name)) {
+        return { category: '15.其它-市售包裝食品', subCategory: '酒類及酒精飲料' };
+      }
+      if (/奶|乳|優格|芝士|起司|乳清|酪/i.test(name)) {
+        return { category: '15.其它-市售包裝食品', subCategory: '乳製品與乳酪製品' };
+      }
+      if (/麵|面|通心粉|拉麵|意麵/i.test(name)) {
+        return { category: '15.其它-市售包裝食品', subCategory: '麵條與即食麵製品' };
+      }
+      if (/糖果|餅乾|饼干|巧克力|糕點|零食|薯片/i.test(name)) {
+        return { category: '15.其它-市售包裝食品', subCategory: '糖果糕點與零食點心' };
+      }
+      if (/茶|咖啡|飲料|果汁|礦泉水/i.test(name)) {
+        return { category: '15.其它-市售包裝食品', subCategory: '咖啡茶飲與飲料' };
+      }
+      if (/預拌粉|蛋糕粉|麵粉|淀粉|澱粉/i.test(name)) {
+        return { category: '15.其它-市售包裝食品', subCategory: '澱粉加工與預拌粉' };
+      }
+      if (/蛋白肽|膠原蛋白|胜肽|萃取蛋白/i.test(name)) {
+        return { category: '15.其它-市售包裝食品', subCategory: '萃取蛋白質' };
+      }
+      if (/罐頭|罐装/i.test(name)) {
+        return { category: '15.其它-市售包裝食品', subCategory: '各類罐頭' };
+      }
+
+      return { category: '15.其它-市售包裝食品', subCategory: '其餘加工品' };
+    }
+
+    function autoClassifyHazard(reason) {
+      if (!reason) {
+        return { major: '標示與法規程序', subHazard: '邊境文件、標示與輸入程序違規', tier3: '未按要求提供證書或合格證明材料' };
+      }
+      
+      const cleanReason = String(reason)
+        .replace(/[\r\n\t]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .replace(/^\d+[\.、\s]+/, '')
+        .trim();
+      const r = cleanReason.toLowerCase();
+
+      if (/感官|感官检验|感官檢驗|气味|色泽|滋味|组织状态/i.test(r)) {
+        return { major: '不符合國家標準 (品質指標)', subHazard: '感官檢驗不符合國家標準', tier3: '感官檢驗不符合國家標準規定' };
+      }
+      if (/叶绿素铜钠|葉綠素銅鈉/i.test(r)) {
+        return { major: '化學性危害', subHazard: '食品添加物不符規定（Food Additives Misuse）', tier3: '葉綠素銅鈉超標/不符規定' };
+      }
+      if (/转基因|轉基因|gmo|gox|e9|nos|camv35s|fmv35s|bar/i.test(r)) {
+        return { major: '化學性危害', subHazard: '非法添加物/未授權物質（Unauthorized Substances）', tier3: '檢出未經批准的轉基因成分 (GMO)' };
+      }
+      if (/未按要求提供证书|未按要求提供證書|合格证明|合格證明/i.test(r)) {
+        return { major: '標示與法規程序', subHazard: '邊境文件、標示與輸入程序違規', tier3: '未按要求提供證書或合格證明材料' };
+      }
+      if (/保质期|保質期/i.test(r)) {
+        return { major: '標示與法規程序', subHazard: '邊境文件、標示與輸入程序違規', tier3: '保質期不符合國家標準規定' };
+      }
+      if (/未获准入|未獲准入/i.test(r)) {
+        return { major: '標示與法規程序', subHazard: '邊境文件、標示與輸入程序違規', tier3: '產品未獲海關准入資格' };
+      }
+      if (/精氨酸/i.test(r)) {
+        return { major: '化學性危害', subHazard: '食品添加物不符規定（Food Additives Misuse）', tier3: '精氨酸等營養強化劑不符規定' };
+      }
+      if (/动物疫病|動物疫病|口蹄疫|禽流感|非洲猪瘟/i.test(r)) {
+        return { major: '生物性危害', subHazard: '檢出動物疫病與檢疫性病原', tier3: '檢出動物疫病 (檢疫性病原)' };
+      }
+      if (/镉|鎘|cadmium/i.test(r)) {
+        return { major: '化學性危害', subHazard: '重金屬（Heavy Metals）', tier3: '重金屬鎘 (Cd) 檢驗值超標' };
+      }
+
+      if (/沙门氏菌|沙門氏菌|salmonella/i.test(r)) {
+        return { major: '生物性危害', subHazard: '致病性微生物污染', tier3: '沙門氏菌檢出 (Salmonella spp.)' };
+      }
+      if (/李斯特|listeria/i.test(r)) {
+        return { major: '生物性危害', subHazard: '致病性微生物污染', tier3: '單核細胞增生李斯特菌檢出' };
+      }
+      if (/stec|大肠杆菌|大腸桿菌|e\.?\s*coli/i.test(r)) {
+        return { major: '生物性危害', subHazard: '致病性微生物污染', tier3: '致病性大腸桿菌檢出' };
+      }
+      if (/有害生物|昆虫|昆蟲|线虫|線蟲|寄生虫|寄生蟲/i.test(r)) {
+        return { major: '生物性危害', subHazard: '檢疫性有害生物與寄生蟲', tier3: '攜帶檢疫性有害生物/寄生蟲' };
+      }
+      if (/大肠菌群|大腸菌群/i.test(r)) {
+        return { major: '生物性危害', subHazard: '衛生指標菌超標（Microbial Criteria）', tier3: '大腸菌群數超標' };
+      }
+      if (/霉菌|黴菌|酵母菌/i.test(r)) {
+        return { major: '生物性危害', subHazard: '衛生指標菌超標（Microbial Criteria）', tier3: '黴菌與酵母菌計數超標' };
+      }
+      if (/菌落总数|菌落總數/i.test(r)) {
+        return { major: '生物性危害', subHazard: '衛生指標菌超標（Microbial Criteria）', tier3: '菌落總數超標' };
+      }
+
+      if (/包装不合格|包裝不合格|破损|破損|泄漏|滲漏|变形|變形/i.test(r)) {
+        return { major: '物理性危害與包裝', subHazard: '包裝規格與防護不合格', tier3: '包裝不合格/破損滲漏' };
+      }
+      if (/异物|異物|金属|金屬|玻璃|塑料|杂质|雜質/i.test(r)) {
+        return { major: '物理性危害與包裝', subHazard: '外來雜質異物污染（Foreign Matter）', tier3: '外來雜質異物污染' };
+      }
+
+      if (/酸价|酸價/i.test(r)) {
+        return { major: '不符合國家標準 (品質指標)', subHazard: '酸價/過氧化值等品質指標不符標準', tier3: '酸價檢驗值超標 (Acid Value)' };
+      }
+      if (/过氧化值|過氧化值/i.test(r)) {
+        return { major: '不符合國家標準 (品質指標)', subHazard: '酸價/過氧化值等品質指標不符標準', tier3: '過氧化值檢驗值超標 (Peroxide Value)' };
+      }
+      if (/挥发性盐基氮|揮發性鹽基氮|tvb-n/i.test(r)) {
+        return { major: '不符合國家標準 (品質指標)', subHazard: '揮發性鹽基氮異常 (TVB-N)', tier3: '揮發性鹽基氮不符合國家標準規定' };
+      }
+      if (/污秽腐败|污穢腐敗|霉变|黴變/i.test(r)) {
+        return { major: '不符合國家標準 (品質指標)', subHazard: '污穢腐敗/變質發霉', tier3: '產品污穢腐敗變質' };
+      }
+      if (/储存温度|儲存溫度|冷链温度|冷鏈/i.test(r)) {
+        return { major: '不符合國家標準 (品質指標)', subHazard: '儲存溫度不符合國家標準', tier3: '儲存溫度不符合食品安全國家標準規定' };
+      }
+
+      if (/呋喃西林|呋喃妥因|呋喃唑酮|硝基呋喃|sem|aoz/i.test(r)) {
+        return { major: '化學性危害', subHazard: '動物用藥殘留（Veterinary Drug Residues）', tier3: '硝基呋喃類代謝物 (SEM/AOZ) 殘留' };
+      }
+      if (/孔雀石绿|孔雀石綠/i.test(r)) {
+        return { major: '化學性危害', subHazard: '動物用藥殘留（Veterinary Drug Residues）', tier3: '孔雀石綠/隱色孔雀石綠殘留' };
+      }
+      if (/氧氟沙星|诺氟沙星|諾氟沙星|恩诺沙星|环丙沙星|氟喹诺酮/i.test(r)) {
+        return { major: '化學性危害', subHazard: '動物用藥殘留（Veterinary Drug Residues）', tier3: '氟喹諾酮類抗生素超標' };
+      }
+      if (/土霉素|四环素|磺胺|氯霉素|兽药|獸藥|抗生素/i.test(r)) {
+        return { major: '化學性危害', subHazard: '動物用藥殘留（Veterinary Drug Residues）', tier3: '動物用藥抗生素殘留超標' };
+      }
+      if (/甲羟孕酮|美仑孕酮|孕酮/i.test(r)) {
+        return { major: '化學性危害', subHazard: '動物用藥殘留（Veterinary Drug Residues）', tier3: '荷爾蒙孕酮類獸藥殘留' };
+      }
+      if (/双咪苯脲|雙咪苯脲|双味苯/i.test(r)) {
+        return { major: '化學性危害', subHazard: '動物用藥殘留（Veterinary Drug Residues）', tier3: '雙咪苯脲殘留超標' };
+      }
+
+      if (/西地那非|他达拉非|sildenafil/i.test(r)) {
+        return { major: '化學性危害', subHazard: '非法添加物/未授權物質（Unauthorized Substances）', tier3: '西地那非/藥品活性成分 (Sildenafil)' };
+      }
+      if (/苏丹红|蘇丹紅|罗丹明/i.test(r)) {
+        return { major: '化學性危害', subHazard: '非法添加物/未授權物質（Unauthorized Substances）', tier3: '非食用工業色素 (蘇丹紅/羅丹明B)' };
+      }
+      if (/新食品原料/i.test(r)) {
+        return { major: '化學性危害', subHazard: '非法添加物/未授權物質（Unauthorized Substances）', tier3: '使用未經批准的新食品原料' };
+      }
+
+      if (/焦亚硫酸钠|焦亞硫酸鈉|亚硫酸|二氧化硫|so2/i.test(r)) {
+        return { major: '化學性危害', subHazard: '食品添加物不符規定（Food Additives Misuse）', tier3: '漂白劑 (二氧化硫/焦亞硫酸鈉) 超標' };
+      }
+      if (/苯甲酸|山梨酸|脱氢乙酸|防腐剂|防腐劑/i.test(r)) {
+        return { major: '化學性危害', subHazard: '食品添加物不符規定（Food Additives Misuse）', tier3: '防腐劑 (苯甲酸/山梨酸) 超標' };
+      }
+      if (/甜蜜素|糖精|阿斯巴甜|甜味剂/i.test(r)) {
+        return { major: '化學性危害', subHazard: '食品添加物不符規定（Food Additives Misuse）', tier3: '甜精/人工甜味劑超標' };
+      }
+      if (/日落黄|柠檬黄|亮蓝|着色剂|著色劑|色素/i.test(r)) {
+        return { major: '化學性危害', subHazard: '食品添加物不符規定（Food Additives Misuse）', tier3: '著色劑超限量或超範圍使用' };
+      }
+      if (/磷酸及磷酸盐|磷酸及磷酸鹽|磷酸盐|磷酸/i.test(r)) {
+        return { major: '化學性危害', subHazard: '食品添加物不符規定（Food Additives Misuse）', tier3: '磷酸及多聚磷酸鹽使用不符規定' };
+      }
+      if (/苹果酸|柠檬酸|酒石酸/i.test(r)) {
+        return { major: '化學性危害', subHazard: '食品添加物不符規定（Food Additives Misuse）', tier3: '酸度調節劑使用不符規定' };
+      }
+
+      if (/铅|鉛|lead/i.test(r)) {
+        return { major: '化學性危害', subHazard: '重金屬（Heavy Metals）', tier3: '重金屬鉛 (Pb) 檢驗值超標' };
+      }
+      if (/汞|砷|无机砷|重金属|重金屬/i.test(r)) {
+        return { major: '化學性危害', subHazard: '重金屬（Heavy Metals）', tier3: '總重金屬檢驗值超標' };
+      }
+
+      if (/黄曲霉|黃麴毒素|aflatoxin|真菌毒素/i.test(r)) {
+        return { major: '化學性危害', subHazard: '真菌毒素/黃麴毒素（Mycotoxins）', tier3: '黃麴毒素 (Aflatoxins) 超標' };
+      }
+
+      if (/缩水甘油|缩水甘油酯|ges|3-氯丙二醇|3-mcpd/i.test(r)) {
+        return { major: '化學性危害', subHazard: '加工產生物/製程污染物（Process Contaminants）', tier3: '縮水甘油酯 (GEs) 超標' };
+      }
+      if (/苯并\(a\)芘|苯并芘|苯駢芘|bap/i.test(r)) {
+        return { major: '化學性危害', subHazard: '加工產生物/製程污染物（Process Contaminants）', tier3: '苯駢芘 (BaP) / 多環芳香烴超標' };
+      }
+      if (/三氯甲烷|甲醇/i.test(r)) {
+        return { major: '化學性危害', subHazard: '加工產生物/製程污染物（Process Contaminants）', tier3: '三氯甲烷/甲醇等副產物超標' };
+      }
+
+      if (/组胺|組織胺|histamine/i.test(r)) {
+        return { major: '化學性危害', subHazard: '天然毒素（Natural Toxins）', tier3: '水產組胺 (Histamine) 超標' };
+      }
+      if (/贝类毒素|貝類毒素|dsp|psp/i.test(r)) {
+        return { major: '化學性危害', subHazard: '天然毒素（Natural Toxins）', tier3: '水產貝類毒素 (DSP/PSP)' };
+      }
+
+      if (/待克利|环氧乙烷|草甘膦|毒死蜱|特丁硫磷|啶蜱脲|农药|農藥/i.test(r)) {
+        return { major: '化學性危害', subHazard: '農藥殘留（Pesticides）', tier3: '農藥化學殘留超標' };
+      }
+
+      if (/标签|標籤|说明书|說明書/i.test(r)) {
+        return { major: '標示與法規程序', subHazard: '標籤標示不符合國家標準規定', tier3: '標籤標示不合格' };
+      }
+      if (/境外食品生产企业注册|企业注册问题|企業註冊/i.test(r)) {
+        return { major: '標示與法規程序', subHazard: '境外食品生產企業註冊問題', tier3: '境外食品生產企業在華註冊問題' };
+      }
+      if (/货证不符|貨證不符|物种鉴定|物種鑑定/i.test(r)) {
+        return { major: '標示與法規程序', subHazard: '貨證不符與申報不實', tier3: '貨證不符與物種申報不符' };
+      }
+
+      return { major: '標示與法規程序', subHazard: '邊境文件、標示與輸入程序違規', tier3: '未按要求提供證書或合格證明材料' };
+    }
+
+    document.getElementById('fileInput').addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files);
+      if (!files || files.length === 0) return;
+
+      const banner = document.getElementById('pdfLoadingBanner');
+      const progressText = document.getElementById('pdfLoadingText');
+      const pageProgress = document.getElementById('pdfPageProgress');
+      banner.classList.remove('hidden');
+
+      let allExtractedRecords = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        progressText.textContent = `[${i + 1}/${files.length}] 正在解析：${file.name}...`;
+
+        try {
+          let records = [];
+          if (file.name.endsWith('.pdf')) {
+            records = await parseSinglePdf(file, (curr, total) => {
+              pageProgress.textContent = `頁次: ${curr}/${total}`;
+            });
+          } else if (file.name.endsWith('.csv')) {
+            records = await parseSingleCsv(file);
+          } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+            records = await parseSingleExcel(file);
+          }
+
+          if (records && records.length > 0) {
+            allExtractedRecords.push(...records);
+            loadedFileNames.add(file.name);
+          }
+        } catch (err) {
+          console.error(`解析檔案 ${file.name} 失敗:`, err);
+        }
+      }
+
+      banner.classList.add('hidden');
+
+      if (allExtractedRecords.length > 0) {
+        mergeNewRecords(allExtractedRecords);
+      } else {
+        showCustomAlert('未能從選取的檔案中解析出邊境查驗資料，請確認檔案格式是否相符。');
+      }
+
+      e.target.value = '';
+    });
+
+    function mergeNewRecords(newRecords) {
+      if (!isUserDatasetActive) {
+        masterData = [];
+        isUserDatasetActive = true;
+      }
+
+      masterData = [...masterData, ...newRecords];
+      updateFileBadgeUI();
+      resetAllFilters();
+
+      showCustomAlert(`✅ 成功匯入入庫！\n本次共解析讀取：${newRecords.length} 筆案件\n目前戰情總庫存：${masterData.length} 筆真實資料 (絕不遺漏任何紀錄)`);
+    }
+
+    function updateFileBadgeUI() {
+      const badge = document.getElementById('importedFilesBadge');
+      if (loadedFileNames.size > 0) {
+        badge.classList.remove('hidden');
+        badge.textContent = `已載入 ${loadedFileNames.size} 個檔案: ` + Array.from(loadedFileNames).join(', ');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    function clearAllDataToFresh() {
+      masterData = [];
+      loadedFileNames.clear();
+      isUserDatasetActive = true;
+      updateFileBadgeUI();
+      resetAllFilters();
+      showCustomAlert('已清空當前資料庫。現在可以開始匯入您的第一批 PDF 或 Excel 檔案！');
+    }
+
+    function showCustomAlert(msg) {
+      const existing = document.getElementById('customAlertBox');
+      if (existing) existing.remove();
+
+      const box = document.createElement('div');
+      box.id = 'customAlertBox';
+      box.className = 'fixed top-14 right-6 z-50 bg-[#0f172a] border border-cyan-500/80 text-white px-5 py-3.5 rounded-xl shadow-2xl text-xs font-sans max-w-md animate-bounce';
+      box.style.animationIterationCount = 1;
+      box.innerHTML = `
+        <div class="flex items-start gap-2.5">
+          <i class="fa-solid fa-circle-check text-cyan-400 text-base mt-0.5"></i>
+          <div class="flex-1 whitespace-pre-line leading-relaxed">${msg}</div>
+          <button onclick="this.parentElement.parentElement.remove()" class="text-slate-400 hover:text-white ml-2 text-sm">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      `;
+      document.body.appendChild(box);
+      setTimeout(() => { if (box) box.remove(); }, 6000);
+    }
+
+    async function parseSinglePdf(file, pageProgressCallback) {
+      const arrayBuffer = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
+      const totalPages = pdf.numPages;
+
+      let extractedRecords = [];
+      let dateGuessed = '2026/08/15';
+
+      const dateMatch = file.name.match(/(202\d)[-_年]?([01]?\d)/);
+      if (dateMatch) {
+        const yr = dateMatch[1];
+        const mo = String(dateMatch[2]).padStart(2, '0');
+        dateGuessed = `${yr}/${mo}/15`;
+      }
+
+      const fileKey = file.name.replace(/\.[^/.]+$/, "");
+      const VIOLATION_REGEX = /焦亚硫酸钠|动物疫病|疫病|呋喃西林|转基因|感官检验|包装不合格|包裝不合格|标签不合格|標籤不合格|未按要求提供|未获准入|货证不符|企业注册问题|二氧化硫|挥发性盐基氮|酸价|过氧化值|储存温度|污秽腐败|霉变|镉检验值|铅检验值|重金属|三氯甲烷|甲醇|苯并|特丁硫磷|啶蜱脲|苹果酸|精氨酸|谷氨酰胺|日落黄|柠檬黄|亮蓝|大肠菌群|霉菌|菌落总数|有害生物|保质期|双咪苯脲|双味苯|退运|物种鉴定|不符合食品安全国家标准/i;
+      const KNOWN_PORTS = ['北京', '成都', '大连', '福州', '广州', '南京', '南宁', '宁波', '青岛', '厦门', '上海', '深圳', '天津', '乌鲁木齐', '湛江', '重庆', '武汉', '海口', '拱北', '昆明', '哈尔滨', '长沙', '黄埔', '汕头'];
+
+      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        if (pageProgressCallback) pageProgressCallback(pageNum, totalPages);
+
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const items = textContent.items;
+        if (!items || items.length === 0) continue;
+
+        const validItems = items.filter(it => {
+          const str = (it.str || '').trim();
+          if (!str) return false;
+          if (str.includes('海关总署') || str.includes('未准入境的食品') || str.includes('郑重说明') || str.includes('鄭重說明')) return false;
+          return true;
+        });
+
+        validItems.sort((a, b) => b.transform[5] - a.transform[5]);
+
+        let headerY = -1;
+        for (const it of validItems) {
+          const s = it.str.trim();
+          if (s.includes('序号') || s.includes('HS编码') || s.includes('报关单号') || s.includes('未准入境的事实')) {
+            headerY = it.transform[5];
+            break;
+          }
+        }
+
+        const dataItems = headerY > 0 ? validItems.filter(it => it.transform[5] < headerY - 5) : validItems;
+        if (dataItems.length === 0) continue;
+
+        const minX = Math.min(...dataItems.map(it => it.transform[4]));
+        const maxX = Math.max(...dataItems.map(it => it.transform[4] + (it.width || 0)));
+        const pageW = maxX - minX || 800;
+
+        const seqItems = [];
+        dataItems.forEach(it => {
+          const s = it.str.trim();
+          const relX = (it.transform[4] - minX) / pageW;
+          if (relX <= 0.12 && /^\d+$/.test(s)) {
+            const num = parseInt(s, 10);
+            if (num > 0 && num < 100000) {
+              seqItems.push({ seq: num, y: it.transform[5], x: it.transform[4] });
+            }
+          }
+        });
+
+        seqItems.sort((a, b) => b.y - a.y);
+
+        if (seqItems.length > 0) {
+          for (let i = 0; i < seqItems.length; i++) {
+            const curSeq = seqItems[i];
+            const topY = curSeq.y + 12;
+            const botY = (i < seqItems.length - 1) ? seqItems[i + 1].y + 12 : -9999;
+
+            const rowPieces = dataItems.filter(it => it.transform[5] <= topY && it.transform[5] > botY);
+            rowPieces.sort((a, b) => a.transform[4] - b.transform[4]);
+            const rowTextCombined = rowPieces.map(p => p.str.trim()).join(' ');
+
+            let hsCode = '';
+            let declarationNo = '';
+            let product = '';
+            let rawCountryCandidate = '';
+            let firmInfo = '';
+            let firmRegNo = '';
+            let importer = '';
+            let importerRegNo = '';
+            let weight = '';
+            let detail = '';
+            let port = '';
+
+            const violationPieces = [];
+            rowPieces.forEach(p => {
+              const text = p.str.trim();
+              if (VIOLATION_REGEX.test(text)) violationPieces.push(text);
+            });
+            if (violationPieces.length > 0) detail = violationPieces.join(' ');
+
+            for (let k = rowPieces.length - 1; k >= 0; k--) {
+              const t = rowPieces[k].str.trim();
+              if (KNOWN_PORTS.some(kp => t.includes(kp)) || t.includes('海关') || t.includes('海關') || t.includes('口岸')) {
+                port = t;
+                break;
+              }
+            }
+
+            const colTexts = Array.from({ length: 12 }, () => []);
+            rowPieces.forEach(piece => {
+              const rx = (piece.transform[4] - minX) / pageW;
+              let colIdx = 0;
+              if (rx < 0.04) colIdx = 0;
+              else if (rx < 0.12) colIdx = 1;
+              else if (rx < 0.22) colIdx = 2;
+              else if (rx < 0.33) colIdx = 3;
+              else if (rx < 0.42) colIdx = 4;
+              else if (rx < 0.54) colIdx = 5;
+              else if (rx < 0.63) colIdx = 6;
+              else if (rx < 0.74) colIdx = 7;
+              else if (rx < 0.83) colIdx = 8;
+              else if (rx < 0.88) colIdx = 9;
+              else if (rx < 0.96) colIdx = 10;
+              else colIdx = 11;
+              colTexts[colIdx].push(piece.str.trim());
+            });
+
+            const colStrs = colTexts.map(arr => arr.join(' ').trim());
+
+            const seqNo = String(curSeq.seq);
+            hsCode = colStrs[1] || '';
+            declarationNo = colStrs[2] || '';
+            product = colStrs[3] || '';
+            rawCountryCandidate = colStrs[4] || '';
+            firmInfo = colStrs[5] || '';
+            firmRegNo = colStrs[6] || '';
+            importer = colStrs[7] || '';
+            importerRegNo = colStrs[8] || '';
+            weight = colStrs[9] || '';
+
+            if (!detail) detail = colStrs[10] || '不符合食品安全國家標準規定';
+
+            const cleanCountry = sanitizeCountryOnly(rawCountryCandidate, rowTextCombined);
+
+            let finalProduct = product;
+            if (!finalProduct || finalProduct.length <= 2) {
+              const prodCandidates = rowPieces.filter(p => {
+                const text = p.str.trim();
+                return text.length > 2 && !/^\d+$/.test(text) && !VIOLATION_REGEX.test(text) && !STANDARD_COUNTRY_MAP[text];
+              });
+              if (prodCandidates.length > 0) {
+                finalProduct = prodCandidates.map(p => p.str.trim()).join('');
+              } else {
+                finalProduct = finalProduct || '進口食品';
+              }
+            }
+
+            const catObj = autoCategorizeProduct(finalProduct);
+            const hazObj = autoClassifyHazard(detail);
+
+            const caseUid = `${fileKey}_${dateGuessed.replace(/\//g,'')}_seq${seqNo}_${declarationNo || Math.random().toString(36).substring(2,6)}`;
+
+            extractedRecords.push({
+              uid: caseUid,
+              id: seqNo,
+              hsCode,
+              declarationNo,
+              product: toTraditionalChinese(finalProduct),
+              country: toTraditionalChinese(cleanCountry),
+              firmInfo: toTraditionalChinese(firmInfo),
+              firmRegNo,
+              importer: toTraditionalChinese(importer),
+              importerRegNo,
+              weight,
+              detail: toTraditionalChinese(detail),
+              port: formatPortName(port),
+              date: dateGuessed,
+              category: toTraditionalChinese(catObj.category),
+              subCategory: toTraditionalChinese(catObj.subCategory),
+              major: toTraditionalChinese(hazObj.major),
+              subHazard: toTraditionalChinese(hazObj.subHazard),
+              tier3: toTraditionalChinese(hazObj.tier3),
+              decision: '依法做退貨或銷毀處理'
+            });
+          }
+        }
+      }
+
+      return extractedRecords;
+    }
+
+    async function parseSingleExcel(file) {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+      return map2DMatrixToRecords(rows, file.name);
+    }
+
+    async function parseSingleCsv(file) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(file, {
+          skipEmptyLines: false,
+          complete: (results) => {
+            resolve(map2DMatrixToRecords(results.data, file.name));
+          },
+          error: (err) => reject(err)
+        });
+      });
+    }
+
+    function map2DMatrixToRecords(rows, fileName) {
+      if (!rows || rows.length === 0) return [];
+
+      let defaultDate = '2026/08/15';
+      const dateMatch = fileName.match(/(202\d)[-_年]?([01]?\d)/);
+      if (dateMatch) {
+        defaultDate = `${dateMatch[1]}/${String(dateMatch[2]).padStart(2, '0')}/15`;
+      }
+
+      const fileKey = fileName.replace(/\.[^/.]+$/, "");
+      const headerKeywords = ['序号', 'hs编码', '报关单号', '产品名称', '品名', '产地', '生产企业', '注册号', '进口商', '重量', '未准入境', '进境口岸', '事实'];
+
+      let headerRowIdx = -1;
+      let maxMatches = 0;
+
+      const scanLimit = Math.min(rows.length, 15);
+      for (let r = 0; r < scanLimit; r++) {
+        const row = rows[r];
+        if (!Array.isArray(row)) continue;
+        const rowStr = row.map(c => String(c || '').replace(/\s+/g, '').toLowerCase()).join(' ');
+        let matches = 0;
+        headerKeywords.forEach(kw => {
+          if (rowStr.includes(kw)) matches++;
+        });
+        if (matches > maxMatches && matches >= 3) {
+          maxMatches = matches;
+          headerRowIdx = r;
+        }
+      }
+
+      let headerHeaders = [];
+      let startRow = 0;
+
+      if (headerRowIdx !== -1) {
+        headerHeaders = rows[headerRowIdx].map(c => String(c || '').replace(/\s+/g, '').toLowerCase());
+        startRow = headerRowIdx + 1;
+      } else {
+        headerHeaders = (rows[0] || []).map(c => String(c || '').replace(/\s+/g, '').toLowerCase());
+        startRow = 1;
+      }
+
+      const findExactColIdx = (exactNames, fallbackNames) => {
+        for (const name of exactNames) {
+          const idx = headerHeaders.findIndex(h => h === name.toLowerCase());
+          if (idx !== -1) return idx;
+        }
+        for (const name of fallbackNames) {
+          const idx = headerHeaders.findIndex(h => h.includes(name.toLowerCase()) && !h.includes('企业') && !h.includes('企業'));
+          if (idx !== -1) return idx;
+        }
+        return -1;
+      };
+
+      const cId = findExactColIdx(['序号', '序號', '编号'], ['序号', '序號']);
+      const cHs = findExactColIdx(['hs编码', 'hs編碼', 'hs', '税号'], ['hs']);
+      const cDec = findExactColIdx(['报关单号', '報關單號', '单号'], ['报关', '報關']);
+      const cProd = findExactColIdx(['产品名称', '產品名稱', '品名', '食品名称'], ['产品', '產品', '品名']);
+      const cCountry = findExactColIdx(['产地', '產地', '原产国', '原產國', '出口国', '出口國', '国家'], ['产地', '產地', '原产国', '出口国']);
+      const cFirm = findExactColIdx(['生产企业信息', '生產企業信息', '生产企业', '境外生产企业'], ['生产企业', '境外']);
+      const cFirmReg = findExactColIdx(['生产企业注册号', '生產企業註冊號', '注册号'], ['注册号', '註冊號']);
+      const cImp = findExactColIdx(['进口商信息', '進口商信息', '进口商', '申報單位'], ['进口商', '進口商']);
+      const cImpReg = findExactColIdx(['进口商备案号', '進口商備案號', '备案号'], ['备案号', '備案號']);
+      const cWeight = findExactColIdx(['重量', '净重'], ['重量', '净重']);
+      const cDetail = findExactColIdx(['未准入境的事实', '未准入境事实', '未准入境原因', '不合格原因', '事实'], ['未准入境', '原因', '事实']);
+      const cPort = findExactColIdx(['进境口岸', '進境口岸', '口岸', '关区'], ['口岸', '关区']);
+
+      const records = [];
+      const VIOLATION_REGEX = /焦亚硫酸钠|动物疫病|疫病|呋喃西林|转基因|感官检验|包装不合格|包裝不合格|标签不合格|標籤不合格|未按要求提供|未获准入|货证不符|企业注册问题|二氧化硫|挥发性盐基氮|酸价|过氧化值|储存温度|污秽腐败|霉变|镉检验值|铅检验值|重金属|三氯甲烷|甲醇|苯并|特丁硫磷|啶蜱脲|苹果酸|精氨酸|谷氨酰胺|日落黄|柠檬黄|亮蓝|大肠菌群|霉菌|菌落总数|有害生物|保质期|双咪苯脲|双味苯|退运|物种鉴定|不符合食品安全国家标准/i;
+
+      for (let i = startRow; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || !Array.isArray(row) || row.length === 0) continue;
+
+        const getColVal = (idx) => (idx !== -1 && row[idx] !== undefined && row[idx] !== null) ? String(row[idx]).trim() : '';
+
+        const id = getColVal(cId) || String(records.length + 1);
+        const hsCode = getColVal(cHs);
+        const declarationNo = getColVal(cDec);
+        const product = getColVal(cProd);
+        const rawCountry = getColVal(cCountry);
+        const firmInfo = getColVal(cFirm);
+        const firmRegNo = getColVal(cFirmReg);
+        const importer = getColVal(cImp);
+        const importerRegNo = getColVal(cImpReg);
+        const weight = getColVal(cWeight);
+        let detail = getColVal(cDetail);
+        const port = getColVal(cPort) || '北京海關';
+
+        if (!product && !declarationNo && !detail && !firmInfo) continue;
+        if (product.includes('产品名称') || detail.includes('未准入境的事实')) continue;
+
+        if (!detail || !VIOLATION_REGEX.test(detail)) {
+          for (let col = 0; col < row.length; col++) {
+            const cellVal = String(row[col] || '').trim();
+            if (VIOLATION_REGEX.test(cellVal)) {
+              detail = cellVal;
+              break;
+            }
+          }
+        }
+        if (!detail) detail = '不符合食品安全國家標準規定';
+
+        detail = detail.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').replace(/^\d+[\.、\s]+/, '').trim();
+        const rowCombinedStr = row.map(c => String(c || '')).join(' ');
+        
+        const cleanCountry = sanitizeCountryOnly(rawCountry, rowCombinedStr);
+        const catObj = autoCategorizeProduct(product || '進口食品');
+        const hazObj = autoClassifyHazard(detail);
+
+        const caseUid = `${fileKey}_${defaultDate.replace(/\//g,'')}_seq${id}_${declarationNo || Math.random().toString(36).substring(2,6)}`;
+
+        records.push({
+          uid: caseUid,
+          id,
+          hsCode,
+          declarationNo,
+          product: toTraditionalChinese(product || '進口食品'),
+          country: toTraditionalChinese(cleanCountry),
+          firmInfo: toTraditionalChinese(firmInfo),
+          firmRegNo,
+          importer: toTraditionalChinese(importer),
+          importerRegNo,
+          weight,
+          detail: toTraditionalChinese(detail),
+          port: formatPortName(port),
+          date: defaultDate,
+          category: toTraditionalChinese(catObj.category),
+          subCategory: toTraditionalChinese(catObj.subCategory),
+          major: toTraditionalChinese(hazObj.major),
+          subHazard: toTraditionalChinese(hazObj.subHazard),
+          tier3: toTraditionalChinese(hazObj.tier3),
+          decision: '依法做退貨或銷毀處理'
+        });
+      }
+
+      return records;
+    }
+
+    window.onload = function() {
+      refreshAll();
+    };
+  </script>
+</body>
+</html>
